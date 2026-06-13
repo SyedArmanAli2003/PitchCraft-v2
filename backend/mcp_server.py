@@ -26,12 +26,12 @@ can be consumed two ways:
      these MCP tool calls — MongoDB is literally giving the agent its
      "superpowers" through MCP.
 
-The tools are thin, well-described wrappers over `mongodb.py`.
+The tools are thin, well-described wrappers over `insforge.py`.
 """
 
 from mcp.server.fastmcp import FastMCP
 
-from mongodb import (
+from insforge import (
     mcp_search_similar_plans,
     mcp_get_market_benchmarks,
     search_market_data,

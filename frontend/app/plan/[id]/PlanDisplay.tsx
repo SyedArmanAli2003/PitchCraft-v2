@@ -3,6 +3,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import type { BusinessPlan, AuditChain } from "@/lib/types"
 import { API } from "@/lib/config"
+import { insforge } from "@/lib/insforge"
 import Navbar from "@/components/Navbar"
 
 const STEP_NAMES: Record<number, string> = {
@@ -591,13 +592,71 @@ function SharkTankTab({ plan }: { plan: BusinessPlan }) {
   )
 }
 
-export default function PlanDisplay({ plan }: { plan: BusinessPlan }) {
+export default function PlanDisplay({ plan: planProp }: { plan: BusinessPlan }) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<Tab>("plan")
   const [copied, setCopied] = useState(false)
   const [hashCopied, setHashCopied] = useState(false)
   const [auditChain, setAuditChain] = useState<AuditChain | null>(null)
   const [auditLoading, setAuditLoading] = useState(true)
+
+  // ── InsForge Realtime ──────────────────────────────────────────────────────
+  // Subscribe to plan:<id>. A Postgres trigger broadcasts the full row on every
+  // UPDATE, so this page updates live on any device with no SSE of its own.
+  const [livePatch, setLivePatch] = useState<Partial<BusinessPlan>>({})
+  const [rtConnected, setRtConnected] = useState(false)
+  // Live-merged view: every `plan.*` read below reflects realtime updates.
+  const plan: BusinessPlan = { ...planProp, ...livePatch }
+
+  useEffect(() => {
+    const id = planProp._id
+    if (!insforge || !id || id === "no-db") return
+    let cancelled = false
+    const channel = `plan:${id}`
+
+    // Each broadcast carries the FULL current row state (AFTER UPDATE → NEW.*),
+    // so merging is monotonic and safe.
+    const onUpdate = (msg: Record<string, unknown>) => {
+      if (cancelled) return
+      setLivePatch(prev => ({
+        ...prev,
+        status:          (msg.status as BusinessPlan["status"]) ?? prev.status,
+        validation:      (msg.validation as BusinessPlan["validation"]) ?? prev.validation,
+        market_research: (msg.market_research as BusinessPlan["market_research"]) ?? prev.market_research,
+        personas:        (msg.personas as BusinessPlan["personas"]) ?? prev.personas,
+        business_plan:   (msg.business_plan as BusinessPlan["business_plan"]) ?? prev.business_plan,
+        financials:      (msg.financials as BusinessPlan["financials"]) ?? prev.financials,
+        risks:           (msg.risks as BusinessPlan["risks"]) ?? prev.risks,
+        share_token:     (msg.share_token as string) ?? prev.share_token,
+      }))
+    }
+
+    const onConnect = () => { if (!cancelled) setRtConnected(true) }
+    const onDisconnect = () => { if (!cancelled) setRtConnected(false) }
+
+    const connect = async () => {
+      try {
+        insforge!.realtime.on("connect", onConnect)
+        insforge!.realtime.on("disconnect", onDisconnect)
+        insforge!.realtime.on("step_update", onUpdate)
+        await insforge!.realtime.connect()
+        const res = await insforge!.realtime.subscribe(channel)
+        if (!cancelled && res?.ok) setRtConnected(true)
+      } catch {
+        /* realtime is best-effort — the server-rendered plan still displays */
+      }
+    }
+    connect()
+
+    return () => {
+      cancelled = true
+      setRtConnected(false)
+      try { insforge!.realtime.off("step_update", onUpdate) } catch { /* noop */ }
+      try { insforge!.realtime.off("connect", onConnect) } catch { /* noop */ }
+      try { insforge!.realtime.off("disconnect", onDisconnect) } catch { /* noop */ }
+      try { insforge!.realtime.unsubscribe(channel) } catch { /* noop */ }
+    }
+  }, [planProp._id])
 
   useEffect(() => {
     if (!plan._id || plan._id === "no-db") { setAuditLoading(false); return }
@@ -640,8 +699,15 @@ export default function PlanDisplay({ plan }: { plan: BusinessPlan }) {
         {/* Header */}
         <div className="flex justify-between items-start mb-6 gap-4">
           <div className="min-w-0">
-            <p className="text-xs uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,0.3)" }}>
+            <p className="text-xs uppercase tracking-widest mb-2 flex items-center gap-2" style={{ color: "rgba(255,255,255,0.3)" }}>
               Business Plan
+              {rtConnected && (
+                <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full normal-case tracking-normal"
+                  style={{ background: "rgba(239,68,68,0.12)", color: "rgb(252,165,165)", border: "1px solid rgba(239,68,68,0.25)" }}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse inline-block" />
+                  Live
+                </span>
+              )}
             </p>
             <h1 className="text-2xl font-bold text-white leading-snug">{plan.idea}</h1>
             <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.35)" }}>

@@ -51,7 +51,7 @@ except Exception:  # pragma: no cover - ADK optional at runtime
     LlmAgent = SequentialAgent = FunctionTool = None
     _ADK_AVAILABLE = False
 
-from mongodb import (
+from insforge import (
     update_plan, search_market_data, mcp_search_similar_plans, mcp_get_market_benchmarks,
     save_audit_chain, create_approval_request, get_approval_request, resolve_approval,
 )
@@ -59,6 +59,47 @@ from audit import hash_step, build_audit_chain, genesis_hash
 from observability import agent_span
 
 load_dotenv()
+
+# ---------------------------------------------------------------------------
+# InsForge Model Gateway (OpenAI-compatible, routed through OpenRouter)
+# ---------------------------------------------------------------------------
+# InsForge's Model Gateway provisions an OpenRouter key (via
+# `npx @insforge/cli ai setup`) and exposes an OpenAI-compatible surface. This
+# is a *secondary* client — the primary reasoning path stays on the google-genai
+# multi-key cascade below. The gateway is the visible InsForge AI integration
+# that judges can see in /api/health and the InsForge dashboard usage view.
+try:
+    from openai import OpenAI as _OpenAICompat
+    _OPENAI_SDK_AVAILABLE = True
+except Exception:  # pragma: no cover - openai optional at runtime
+    _OpenAICompat = None
+    _OPENAI_SDK_AVAILABLE = False
+
+_INSFORGE_GATEWAY_BASE = os.getenv("INSFORGE_GATEWAY_BASE", "https://openrouter.ai/api/v1")
+
+
+def _insforge_gateway_key() -> str:
+    return (os.getenv("OPENROUTER_API_KEY") or "").strip()
+
+
+def insforge_model_client():
+    """An OpenAI-compatible client routed through the InsForge Model Gateway
+    (OpenRouter key provisioned by InsForge). Returns None if unavailable."""
+    if not _OPENAI_SDK_AVAILABLE:
+        return None
+    key = _insforge_gateway_key()
+    if not key:
+        return None
+    try:
+        return _OpenAICompat(base_url=_INSFORGE_GATEWAY_BASE, api_key=key)
+    except Exception:
+        return None
+
+
+def insforge_gateway_ready() -> bool:
+    """True when the InsForge Model Gateway client can be constructed (key set).
+    Surfaced as `insforge_gateway` in /api/health."""
+    return insforge_model_client() is not None
 
 # ---------------------------------------------------------------------------
 # API key pool — cycles through GEMINI_API_KEY_1 … _N on 429 / quota errors

@@ -18,7 +18,7 @@ def find_pending():
         r.raise_for_status()
         return r.json()
     except Exception:
-        # Fallback: import the backend mongodb helper directly (local dev)
+        # Fallback: import the backend insforge helper directly (local dev)
         try:
             import sys
             from pathlib import Path
@@ -27,7 +27,7 @@ def find_pending():
             root = Path(__file__).resolve().parents[1]
             if str(root) not in sys.path:
                 sys.path.insert(0, str(root))
-            from mongodb import list_approval_requests
+            from insforge import list_approval_requests
 
             return list_approval_requests("pending")
         except Exception as e:

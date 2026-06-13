@@ -22,11 +22,14 @@ from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from models import IdeaRequest, ApprovalDecision
-from agent import run_pitchcraft_agent, get_models_list, _load_api_keys, get_agent_manifest
-from mongodb import (
+from agent import (
+    run_pitchcraft_agent, get_models_list, _load_api_keys, get_agent_manifest,
+    insforge_gateway_ready,
+)
+from insforge import (
     init_db, save_plan, get_plan, get_plan_by_token, get_plan_count, get_plans_today,
     get_recent_plans, get_audit_chain, get_approval_request, resolve_approval, _get_db,
-    get_all_plans_admin, get_user_stats,
+    get_all_plans_admin, get_user_stats, insforge_ready,
 )
 from audit import verify_audit_chain, reconstruct_steps_from_plan
 from observability import init_observability, observability_status
@@ -96,7 +99,8 @@ async def health():
         "status": "ok",
         "service": "PitchCraft Agent",
         "gemini": _gemini_ready(),
-        "atlas": _get_db() is not None,
+        "insforge": insforge_ready(),
+        "insforge_gateway": insforge_gateway_ready(),
     }
 
 
@@ -242,7 +246,7 @@ async def verify_plan_audit(plan_id: str):
 @app.get("/api/approvals")
 async def list_approvals(status: str | None = None):
     """List approval requests. Optional query param `status` filters by status."""
-    from mongodb import list_approval_requests
+    from insforge import list_approval_requests
 
     approvals = list_approval_requests(status)
     return approvals
@@ -321,7 +325,7 @@ async def admin_stats(request: Request):
         "unique_users": len(users),
         "users": users,
         "gemini_ready": _gemini_ready(),
-        "mongodb_connected": _get_db() is not None,
+        "insforge_connected": insforge_ready(),
     }
 
 
