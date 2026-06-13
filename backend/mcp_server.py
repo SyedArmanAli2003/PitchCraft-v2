@@ -1,6 +1,6 @@
-"""PitchCraft MongoDB MCP server — a real, protocol-compliant MCP server.
+"""PitchCraft InsForge MCP server — a real, protocol-compliant MCP server.
 
-This exposes the PitchCraft MongoDB data layer as Model Context Protocol tools.
+This exposes the PitchCraft InsForge data layer as Model Context Protocol tools.
 It's a genuine MCP server (built on the official `mcp` SDK), not a façade — it
 can be consumed two ways:
 
@@ -13,7 +13,7 @@ can be consumed two ways:
      Example Claude Desktop config:
          {
            "mcpServers": {
-             "pitchcraft-mongodb": {
+             "pitchcraft-insforge": {
                "command": "python",
                "args": ["/abs/path/to/backend/mcp_server.py"]
              }
@@ -23,7 +23,7 @@ can be consumed two ways:
   2. **In-process by the PitchCraft agent** over the real MCP protocol via an
      in-memory client↔server session (see `agent.call_mcp_tool`). The agent's
      market-research (Step 2) and financial (Step 5) grounding flows through
-     these MCP tool calls — MongoDB is literally giving the agent its
+     these MCP tool calls — InsForge Postgres is literally giving the agent its
      "superpowers" through MCP.
 
 The tools are thin, well-described wrappers over `insforge.py`.
@@ -37,12 +37,12 @@ from insforge import (
     search_market_data,
 )
 
-mcp = FastMCP("PitchCraft MongoDB MCP")
+mcp = FastMCP("PitchCraft InsForge MCP")
 
 
 @mcp.tool()
 def search_similar_plans(industry: str) -> dict:
-    """Search completed business plans stored in MongoDB whose target market
+    """Search completed business plans stored in InsForge whose target market
     matches an industry. Returns the most relevant prior plans (market research,
     financials, viability) so the agent can ground new analysis in real patterns
     it has seen before.
@@ -56,7 +56,7 @@ def search_similar_plans(industry: str) -> dict:
 @mcp.tool()
 def get_market_benchmarks(industry: str) -> dict:
     """Aggregate real benchmarks (average viability score, average break-even
-    month, number of plans analysed) from completed plans in MongoDB and blend
+    month, number of plans analysed) from completed plans in InsForge and blend
     them with seed industry data. Used to keep financial projections realistic.
 
     Args:
@@ -67,7 +67,7 @@ def get_market_benchmarks(industry: str) -> dict:
 
 @mcp.tool()
 def get_industry_market_data(industry: str) -> dict:
-    """Look up curated market data for an industry from MongoDB: market size,
+    """Look up curated market data for an industry from InsForge: market size,
     growth rate, key players, average revenue and the main challenges. Falls
     back to the closest seeded industry when there is no exact match.
 

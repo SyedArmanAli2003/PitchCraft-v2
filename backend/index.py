@@ -141,18 +141,18 @@ async def agent_info():
         "model_provider": "Google Gemini 3 via the google-genai SDK",
         "model_cascade": [MODEL_CONFIGS[k]["model_id"] for k in CASCADE_ORDER],
         "human_in_the_loop": "approval gate after Step 2 (market research)",
-        "mcp_integration": "PitchCraft MongoDB MCP server (Model Context Protocol)",
+        "mcp_integration": "PitchCraft InsForge MCP server (Model Context Protocol)",
         "observability": "Arize Phoenix (OpenInference auto-instrumentation)",
         "trust": "SHA-256 tamper-evident audit chain per plan",
         "manifest": "/api/agent/manifest",
-        "hackathon": "Google Cloud Rapid Agent Hackathon 2026 — MongoDB & Arize tracks",
+        "hackathon": "InsForge Launch Week 2 Hackathon 2026",
     }
 
 
 @app.get("/api/agent/manifest")
 async def agent_manifest():
     """Full multi-agent architecture manifest — the 7 named specialists, their
-    ADK agent names, declared tools, the MongoDB integration and observability.
+    ADK agent names, declared tools, the InsForge integration and observability.
     Built from the same agent objects that actually run, so it can't drift."""
     return get_agent_manifest()
 
@@ -345,10 +345,10 @@ async def admin_users(request: Request):
 
 @app.get("/api/mcp/tools")
 async def get_mcp_tools():
-    """The real tool manifest served by the PitchCraft MongoDB MCP server."""
+    """The real tool manifest served by the PitchCraft InsForge MCP server."""
     from mcp_server import list_tools_manifest
     return {
-        "mcp_server": "PitchCraft MongoDB MCP",
+        "mcp_server": "PitchCraft InsForge MCP",
         "protocol": "Model Context Protocol",
         "transports": ["stdio", "in-memory (agent)"],
         "tools": await list_tools_manifest(),
@@ -361,7 +361,7 @@ async def mcp_demo():
     session) — exactly the path the agent uses to ground its reasoning."""
     from agent import call_mcp_tool
     return {
-        "demo": "MongoDB powering the agent via the MCP protocol",
+        "demo": "InsForge Postgres powering the agent via the MCP protocol",
         "get_industry_market_data": await call_mcp_tool("get_industry_market_data", {"industry": "technology"}),
         "search_similar_plans": await call_mcp_tool("search_similar_plans", {"industry": "technology"}),
         "get_market_benchmarks": await call_mcp_tool("get_market_benchmarks", {"industry": "technology"}),

@@ -72,9 +72,9 @@ def main() -> int:
                 if data.get("_fallback"):
                     extra = f"  FALLBACK->{data['_fallback']}"
                 if step == 2:
-                    extra += f"  mongodb_sources={'YES' if data.get('mongodb_sources') else 'MISSING'}"
+                    extra += f"  insforge_sources={'YES' if data.get('insforge_sources') else 'MISSING'}"
                 if step == 5:
-                    extra += f"  mongodb_benchmarks={'YES' if data.get('mongodb_benchmarks') else 'MISSING'}"
+                    extra += f"  insforge_benchmarks={'YES' if data.get('insforge_benchmarks') else 'MISSING'}"
                 if step == 7:
                     extra += f"  plan_id={data.get('plan_id')} model={data.get('model_used')}"
             if status == "error":

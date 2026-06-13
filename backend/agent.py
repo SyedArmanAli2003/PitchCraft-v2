@@ -5,16 +5,16 @@ ARCHITECTURE
 Seven *named specialist agents* collaborate, handing off to each other like a
 real consulting firm. The six reasoning specialists are genuine
 `google.adk.agents.LlmAgent` objects (each with a name, description, system
-instruction and declared MongoDB tools); the seventh — the Chief of Staff —
+instruction and declared InsForge tools); the seventh — the Chief of Staff —
 compiles, persists and cryptographically seals the plan. They are composed into
 a single ADK `SequentialAgent` pipeline (the canonical ADK "agents that hand off
 to each other" pattern, mirroring the ADK-hackathon-winning multi-agent design).
 
   1. Strategy Analyst            → validates the idea
-  2. Market Intelligence Analyst → researches the market via the MongoDB MCP server
+  2. Market Intelligence Analyst → researches the market via the InsForge MCP server
   3. Customer Insights Specialist→ builds customer personas
   4. Business Architect          → writes the full business plan
-  5. Financial Modeller          → projects 3-year financials (MongoDB benchmarks)
+  5. Financial Modeller          → projects 3-year financials (InsForge benchmarks)
   6. Risk & Compliance Officer   → risk analysis + SWOT
   7. Chief of Staff              → persists + SHA-256 audit chain
 
@@ -84,14 +84,17 @@ def _insforge_gateway_key() -> str:
 
 def insforge_model_client():
     """An OpenAI-compatible client routed through the InsForge Model Gateway
-    (OpenRouter key provisioned by InsForge). Returns None if unavailable."""
+    (OpenRouter key provisioned by InsForge). Returns None if unavailable.
+    Configured to fail fast (no internal retries, short timeout) so the agent
+    can rotate across free models quickly instead of hanging on a 429 storm."""
     if not _OPENAI_SDK_AVAILABLE:
         return None
     key = _insforge_gateway_key()
     if not key:
         return None
     try:
-        return _OpenAICompat(base_url=_INSFORGE_GATEWAY_BASE, api_key=key)
+        return _OpenAICompat(base_url=_INSFORGE_GATEWAY_BASE, api_key=key,
+                             max_retries=0, timeout=30.0)
     except Exception:
         return None
 
@@ -300,41 +303,104 @@ def _call_with_key_rotation(prompt: str, model_id: str, keys: list[str]) -> dict
     raise last_err or RuntimeError("All API keys exhausted.")
 
 
+# ---------------------------------------------------------------------------
+# InsForge Model Gateway generation (free OpenRouter models)
+# ---------------------------------------------------------------------------
+# Free, reliable fallback so PitchCraft can run end-to-end at $0 even with no
+# Gemini keys. Free models are rate-limited upstream (429), so we rotate through
+# several and let the caller retry. INSFORGE_GATEWAY_MODEL (if set) is tried
+# first. All are OpenAI-compatible chat completions in forced-JSON mode.
+_GATEWAY_FREE_MODELS = [
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "qwen/qwen3-next-80b-a3b-instruct:free",
+    "nousresearch/hermes-3-llama-3.1-405b:free",
+    "meta-llama/llama-3.2-3b-instruct:free",
+]
+
+
+def _gateway_models() -> list[str]:
+    preferred = (os.getenv("INSFORGE_GATEWAY_MODEL") or "").strip()
+    models = ([preferred] if preferred else []) + _GATEWAY_FREE_MODELS
+    seen, ordered = set(), []
+    for m in models:
+        if m and m not in seen:
+            seen.add(m)
+            ordered.append(m)
+    return ordered
+
+
+def _call_gateway_json(prompt: str) -> dict:
+    """Generate JSON via the InsForge Model Gateway, rotating across free
+    OpenRouter models on rate-limit. Raises if the gateway is unconfigured or
+    every free model is exhausted."""
+    client = insforge_model_client()
+    if client is None:
+        raise RuntimeError("InsForge Model Gateway not configured")
+    last_err: Exception | None = None
+    for model in _gateway_models():
+        try:
+            resp = client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                response_format={"type": "json_object"},
+                temperature=0.7,
+            )
+            text = resp.choices[0].message.content if resp.choices else None
+            if not text:
+                raise RuntimeError(f"Empty response from gateway model {model}")
+            print(f"✅ InsForge gateway answered via {model}")
+            return parse_json_response(text)
+        except Exception as e:
+            print(f"⚠️  Gateway model {model} failed ({type(e).__name__})")
+            last_err = e
+            continue
+    raise last_err or RuntimeError("All InsForge gateway free models exhausted.")
+
+
 async def _generate(prompt: str, model_key: str, keys: list[str]) -> tuple[dict, str]:
     """
-    Try the chosen Gemini tier, then cascade to lower tiers on any failure.
-    On a quota failure, waits 12 s before the next tier so the per-minute
-    window has a chance to partially reset.
-    Returns (result_dict, actually_used_model_key).
+    Try the chosen Gemini tier, then cascade to lower tiers on any failure, then
+    fall back to the free InsForge Model Gateway (OpenRouter). On a quota
+    failure between Gemini tiers, waits 12 s so the per-minute window can reset.
+    Returns (result_dict, actually_used_model_key). The gateway returns the
+    sentinel "insforge-gateway" so the UI can badge it.
     """
     start = CASCADE_ORDER.index(model_key) if model_key in CASCADE_ORDER else 0
     last_err: Exception | None = None
 
-    for i, candidate in enumerate(CASCADE_ORDER[start:]):
-        try:
-            cfg = MODEL_CONFIGS[candidate]
-            result = await asyncio.to_thread(
-                _call_with_key_rotation, prompt, cfg["model_id"], keys
-            )
-            return result, candidate
-        except Exception as e:
-            err_lower = str(e).lower()
-            is_quota = any(tok in err_lower for tok in ("429", "quota", "rate_limit", "resource_exhausted"))
-            print(f"⚠️  Cascade: {cfg['model_id']} failed ({type(e).__name__}) quota={is_quota}")
-            last_err = e
-            # Brief pause between tiers when rate-limited — lets the 1-min window reset a bit.
-            if is_quota and i < len(CASCADE_ORDER) - 1:
-                await asyncio.sleep(12)
+    if keys:
+        for i, candidate in enumerate(CASCADE_ORDER[start:]):
+            try:
+                cfg = MODEL_CONFIGS[candidate]
+                result = await asyncio.to_thread(
+                    _call_with_key_rotation, prompt, cfg["model_id"], keys
+                )
+                return result, candidate
+            except Exception as e:
+                err_lower = str(e).lower()
+                is_quota = any(tok in err_lower for tok in ("429", "quota", "rate_limit", "resource_exhausted"))
+                print(f"⚠️  Cascade: {cfg['model_id']} failed ({type(e).__name__}) quota={is_quota}")
+                last_err = e
+                # Brief pause between tiers when rate-limited — lets the window reset a bit.
+                if is_quota and i < len(CASCADE_ORDER) - 1:
+                    await asyncio.sleep(12)
 
-    raise last_err or RuntimeError("All Gemini models in the cascade failed.")
+    # Free fallback: InsForge Model Gateway (works with no Gemini keys at all).
+    try:
+        result = await asyncio.to_thread(_call_gateway_json, prompt)
+        return result, "insforge-gateway"
+    except Exception as e:
+        last_err = e or last_err
+
+    raise last_err or RuntimeError("All models (Gemini cascade + InsForge gateway) failed.")
 
 
 # ---------------------------------------------------------------------------
-# MongoDB grounding via the real MCP protocol
+# InsForge grounding via the real MCP protocol
 # ---------------------------------------------------------------------------
 
 def _direct_tool_fallback(name: str, arguments: dict) -> dict:
-    """Call the underlying MongoDB tool directly if the MCP layer is unavailable
+    """Call the underlying InsForge tool directly if the MCP layer is unavailable
     (e.g. the `mcp` package isn't installed). The agent must never lose grounding
     over a transport hiccup."""
     industry = arguments.get("industry", "technology")
@@ -464,17 +530,17 @@ DEFAULT_MODEL_ID = MODEL_CONFIGS[DEFAULT_MODEL_KEY]["model_id"]
 # the very same MongoDB data through the MCP protocol (see call_mcp_tool).
 
 def adk_search_similar_plans(industry: str) -> dict:
-    """Search completed business plans in MongoDB by industry (MCP-backed)."""
+    """Search completed business plans in InsForge by industry (MCP-backed)."""
     return mcp_search_similar_plans(industry)
 
 
 def adk_get_industry_market_data(industry: str) -> dict:
-    """Look up curated industry market data from MongoDB (MCP-backed)."""
+    """Look up curated industry market data from InsForge (MCP-backed)."""
     return search_market_data(industry)
 
 
 def adk_get_market_benchmarks(industry: str) -> dict:
-    """Aggregate financial benchmarks from stored plans in MongoDB (MCP-backed)."""
+    """Aggregate financial benchmarks from stored plans in InsForge (MCP-backed)."""
     return mcp_get_market_benchmarks(industry)
 
 
@@ -598,15 +664,15 @@ class MarketAgent(BaseSpecialist):
     specialist = "Market Intelligence Analyst"
     adk_name = "market_intelligence_analyst"
     plan_field = "market_research"
-    description = "Researches the market by querying MongoDB via the MCP server."
+    description = "Researches the market by querying InsForge Postgres via the MCP server."
     instruction = (
         "You are the Market Intelligence Analyst at PitchCraft. You ground every "
-        "claim in real data retrieved from MongoDB through the Model Context "
-        "Protocol: curated industry data and similar validated plans. Size the "
-        "market, quantify growth, expose competitor weaknesses and find the gap. "
-        "Cite the MongoDB data where it informs you. Reply with valid JSON only."
+        "claim in real data retrieved from InsForge Postgres through the Model "
+        "Context Protocol: curated industry data and similar validated plans. Size "
+        "the market, quantify growth, expose competitor weaknesses and find the gap. "
+        "Cite the InsForge data where it informs you. Reply with valid JSON only."
     )
-    tool_names = ["mongodb_mcp:get_industry_market_data", "mongodb_mcp:search_similar_plans"]
+    tool_names = ["insforge_mcp:get_industry_market_data", "insforge_mcp:search_similar_plans"]
 
     def _build_tools(self):
         return _make_tools(adk_get_industry_market_data, adk_search_similar_plans)
@@ -614,12 +680,12 @@ class MarketAgent(BaseSpecialist):
     async def build_prompt(self, ctx: dict) -> str:
         idea = ctx["idea"]
         industry = (ctx.get("validation") or {}).get("target_market", "") or "technology"
-        # Explicit MongoDB MCP tool calls — the heart of the MongoDB track.
+        # Explicit InsForge MCP tool calls — the heart of the InsForge integration.
         market = await call_mcp_tool("get_industry_market_data", {"industry": industry})
         similar = await call_mcp_tool("search_similar_plans", {"industry": industry})
         ctx["_market_mcp"] = {"industry": industry, "industry_data": market, "similar": similar}
         return f"""For startup: "{idea}"
-Industry context from MongoDB (via MCP): {json.dumps(market)}
+Industry context from InsForge (via MCP): {json.dumps(market)}
 Similar validated plans from our database (via MCP): {json.dumps(similar)}
 
 Use the MCP data to ground your research in real patterns.
@@ -633,13 +699,13 @@ Return ONLY valid JSON:
 }}"""
 
     def post_process(self, result: dict, ctx: dict) -> dict:
-        # Attach a deterministic record of the MongoDB grounding so judges (and
-        # the UI) can see the agent actually queried MongoDB to reason.
+        # Attach a deterministic record of the InsForge grounding so judges (and
+        # the UI) can see the agent actually queried InsForge to reason.
         mcp = ctx.get("_market_mcp", {})
         similar = mcp.get("similar") or {}
         industry_data = mcp.get("industry_data") or {}
         if isinstance(result, dict):
-            result["mongodb_sources"] = {
+            result["insforge_sources"] = {
                 "industry_queried": mcp.get("industry"),
                 "similar_plans_found": int(similar.get("count", 0) or 0),
                 "industry_data_used": bool(industry_data),
@@ -729,14 +795,14 @@ class FinanceAgent(BaseSpecialist):
     specialist = "Financial Modeller"
     adk_name = "financial_modeller"
     plan_field = "financials"
-    description = "Projects 3-year financials, grounded in MongoDB benchmarks."
+    description = "Projects 3-year financials, grounded in InsForge benchmarks."
     instruction = (
         "You are the Financial Modeller at PitchCraft. Build a realistic 3-year "
         "financial projection. Anchor your numbers to the benchmark averages "
-        "retrieved from MongoDB via MCP so they stay credible. Reply with valid "
+        "retrieved from InsForge via MCP so they stay credible. Reply with valid "
         "JSON only."
     )
-    tool_names = ["mongodb_mcp:get_market_benchmarks", "gemini_reasoning"]
+    tool_names = ["insforge_mcp:get_market_benchmarks", "gemini_reasoning"]
 
     def _build_tools(self):
         return _make_tools(adk_get_market_benchmarks)
@@ -749,7 +815,7 @@ class FinanceAgent(BaseSpecialist):
         ctx["_finance_benchmarks"] = {"industry": industry, "benchmarks": benchmarks}
         return f"""Create 3-year financial projection for: "{idea}"
 Revenue model: {business_plan.get('revenue_model', 'SaaS')}
-Benchmarks from our MongoDB (via MCP): {json.dumps(benchmarks)}
+Benchmarks from our InsForge DB (via MCP): {json.dumps(benchmarks)}
 Use the benchmark averages to keep your numbers realistic.
 Return ONLY valid JSON:
 {{
@@ -763,12 +829,12 @@ Return ONLY valid JSON:
 }}"""
 
     def post_process(self, result: dict, ctx: dict) -> dict:
-        # Deterministic record of the MongoDB grounding, mirroring MarketAgent,
+        # Deterministic record of the InsForge grounding, mirroring MarketAgent,
         # so the UI can show that the financials were benchmark-anchored.
         fb = ctx.get("_finance_benchmarks") or {}
         bm = fb.get("benchmarks") or {}
         if isinstance(result, dict):
-            result["mongodb_benchmarks"] = {
+            result["insforge_benchmarks"] = {
                 "industry_queried": fb.get("industry"),
                 "plans_analyzed": bm.get("plans_analyzed", 0),
                 "avg_break_even_month": bm.get("avg_break_even_month"),
@@ -818,9 +884,9 @@ EXPORT_AGENT_MANIFEST = {
     "id": 7,
     "name": "Chief of Staff",
     "adk_agent": "chief_of_staff",
-    "role": "Compiles every specialist's output, persists the plan to MongoDB and "
-            "seals a SHA-256 tamper-evident audit chain.",
-    "tools": ["mongodb_persist", "sha256_audit_chain", "share_token"],
+    "role": "Compiles every specialist's output, persists the plan to InsForge "
+            "Postgres and seals a SHA-256 tamper-evident audit chain.",
+    "tools": ["insforge_persist", "sha256_audit_chain", "share_token"],
     "persists_to": "share_token / audit_chain_hash",
     "adk_llm_agent": False,
 }
@@ -871,15 +937,16 @@ class PitchCraftOrchestra:
                          "a resilient multi-key 4-tier cascade with forced-JSON + Arize tracing",
             "model_cascade": [MODEL_CONFIGS[k]["model_id"] for k in CASCADE_ORDER],
             "agents": agents,
-            "mongodb_integration": {
-                "collections_used": ["business_plans", "market_data", "audit_chains", "approval_requests"],
+            "insforge_integration": {
+                "tables_used": ["business_plans", "market_data", "audit_chains", "approval_requests"],
                 "operations": [
-                    "find / regex match for similar plans",
-                    "$group-style aggregation for benchmarks",
-                    "insertOne for plan persistence",
+                    "PostgREST filter/ilike for similar plans",
+                    "client-side aggregation for benchmarks",
+                    "REST insert for plan persistence",
                     "SHA-256 audit chain in audit_chains",
                 ],
-                "mcp_server": "PitchCraft MongoDB MCP (Model Context Protocol)",
+                "realtime": "Postgres trigger → realtime.publish('plan:<id>', 'step_update')",
+                "mcp_server": "PitchCraft InsForge MCP (Model Context Protocol)",
                 "mcp_endpoint": "/api/mcp/tools",
             },
             "observability": {
@@ -892,7 +959,12 @@ class PitchCraftOrchestra:
     async def run(self, idea: str, plan_id: str, model_key: str = DEFAULT_MODEL_KEY):
         """Yield one SSE-ready dict per completed step — identical event shape to
         the original pipeline, plus additive `agent` / `specialist` metadata."""
-        keys = _load_api_keys()
+        try:
+            keys = _load_api_keys()
+        except RuntimeError:
+            # No Gemini keys configured — fall back entirely to the free
+            # InsForge Model Gateway (OpenRouter) inside _generate.
+            keys = []
         update_plan(plan_id, "status", "generating")
         update_plan(plan_id, "model", MODEL_CONFIGS.get(model_key, {}).get("display", model_key))
 

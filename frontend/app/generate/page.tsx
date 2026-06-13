@@ -63,7 +63,7 @@ const DEMO_STEP_DELAY_MS = 1500 // pace between replayed steps
 
 const DEMO_TOOLS: Record<number, AgentStep["tool"]> = {
   1: "gemini-3-flash-preview",
-  2: "mongodb",
+  2: "insforge",
   3: "gemini-3-flash-preview",
   4: "gemini-3-flash-preview",
   5: "gemini-3-flash-preview",
@@ -101,7 +101,7 @@ const DEMO_PLAN: { idea: string; steps: Array<{ step: number; name: string; data
         ],
         market_gap: "Zero offline-first vernacular AI tutors",
         opportunity_score: 9,
-        mongodb_sources: ["market_data.education", "2 similar plans found"],
+        insforge_sources: ["market_data.education", "2 similar plans found"],
       },
     },
     {
@@ -149,7 +149,7 @@ const DEMO_PLAN: { idea: string; steps: Array<{ step: number; name: string; data
         monthly_burn: "₹3.5 lakhs",
         break_even_month: 14,
         funding_needed: "₹50 lakhs seed",
-        mongodb_benchmarks: { plans_analyzed: 47, avg_break_even_month: 16, protocol: "Model Context Protocol" },
+        insforge_benchmarks: { plans_analyzed: 47, avg_break_even_month: 16, protocol: "Model Context Protocol" },
       },
     },
     {
@@ -325,7 +325,7 @@ function GenerateContent() {
 
   const freshSteps = (modelKey: ModelKey = selectedModel): AgentStep[] => [
     { stepNumber: 1, name: "Validate Idea",         status: "waiting", tool: modelKey },
-    { stepNumber: 2, name: "Research Market",       status: "waiting", tool: "mongodb"  },
+    { stepNumber: 2, name: "Research Market",       status: "waiting", tool: "insforge"  },
     { stepNumber: 3, name: "Define Audience",       status: "waiting", tool: modelKey },
     { stepNumber: 4, name: "Build Business Plan",   status: "waiting", tool: modelKey },
     { stepNumber: 5, name: "Financial Projections", status: "waiting", tool: modelKey },
@@ -1035,7 +1035,7 @@ function GenerateContent() {
                   Plan generated successfully!
                 </p>
                 <p className="text-xs mb-3" style={{ color: "rgba(255,255,255,0.4)" }}>
-                  MongoDB offline — plan not saved. Start the backend with a valid MongoDB URI to enable persistence.
+                  InsForge offline — plan not saved. Set INSFORGE_URL and INSFORGE_SERVICE_KEY on the backend to enable persistence.
                 </p>
                 <button onClick={reset} className="text-xs px-4 py-2 rounded-lg cursor-pointer"
                   style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.12)" }}>

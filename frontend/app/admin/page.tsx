@@ -27,7 +27,7 @@ interface AdminStats {
   unique_users: number
   users: UserStat[]
   gemini_ready: boolean
-  mongodb_connected: boolean
+  insforge_connected: boolean
 }
 
 function StatCard({ label, value, icon, color }: { label: string; value: string | number; icon: string; color: string }) {
@@ -183,9 +183,9 @@ export default function AdminPage() {
           <div className="rounded-2xl p-4 mb-6 flex flex-wrap gap-4"
             style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
             <div className="flex items-center gap-2">
-              <span className={stats.mongodb_connected ? "text-green-400" : "text-red-400"}>●</span>
-              <p className="text-sm text-white">MongoDB</p>
-              <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>{stats.mongodb_connected ? "Connected" : "Disconnected"}</p>
+              <span className={stats.insforge_connected ? "text-green-400" : "text-red-400"}>●</span>
+              <p className="text-sm text-white">InsForge</p>
+              <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>{stats.insforge_connected ? "Connected" : "Disconnected"}</p>
             </div>
             <div className="flex items-center gap-2">
               <span className={stats.gemini_ready ? "text-green-400" : "text-yellow-400"}>●</span>

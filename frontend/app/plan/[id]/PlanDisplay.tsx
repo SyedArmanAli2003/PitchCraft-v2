@@ -1103,7 +1103,7 @@ export default function PlanDisplay({ plan: planProp }: { plan: BusinessPlan }) 
                 <p className="text-3xl mb-3">🔓</p>
                 <p className="text-sm font-medium text-white mb-1">Audit chain not available</p>
                 <p className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
-                  This plan was generated without MongoDB — chain data was not persisted.
+                  This plan was generated without InsForge — chain data was not persisted.
                 </p>
               </div>
             )}
