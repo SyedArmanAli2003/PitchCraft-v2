@@ -363,6 +363,7 @@ Then connect the frontend repo to Vercel and set `NEXT_PUBLIC_API_BASE` to the C
 - ✅ **Audit Trail tab.** SHA-256 chain build → verify → tamper-detect, with a live timeline UI in the plan page.
 - ✅ **Demo / offline fallback mode.** If the backend is unreachable for 60 s, the generate page replays a pre-built 7-step demo plan so judges always see a completed run.
 - ✅ **Auth + History.** InsForge JWT auth gates the `/history` route; per-user plan lists load via `@insforge/sdk`.
+- ✅ **Google OAuth & PKCE.** Fully integrated automatic OAuth code exchange and PKCE flow via the InsForge SDK, removing manual PKCE conflicts and stabilizing the login page.
 - ✅ **Admin dashboard.** `/admin` shows all plans, user stats, and the pending approval queue — guarded by `ADMIN_SECRET`.
 - ✅ **Arize Phoenix tracing** initializes, instruments `google-genai`, and emits spans — self-disables safely without a key.
 - ✅ **CORS** fixed to match Vercel preview domains via regex.

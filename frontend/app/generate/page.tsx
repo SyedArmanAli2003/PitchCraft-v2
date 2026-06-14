@@ -318,16 +318,6 @@ function GenerateContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [idea, setIdea]              = useState("")
-
-  // Auth guard — redirect to login if not signed in
-  useEffect(() => {
-    try {
-      if (!localStorage.getItem("pitchcraft_user")) {
-        router.replace("/login?redirect=/generate")
-      }
-    } catch { /* ignore SSR */ }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
   const [submitted, setSubmitted]    = useState(false)
   const [steps, setSteps]            = useState<AgentStep[]>([])
   const [planId, setPlanId]          = useState<string | null>(null)
@@ -351,9 +341,17 @@ function GenerateContent() {
   const [demoComplete, setDemoComplete] = useState(false)
   const ideaRef = useRef(idea)
   ideaRef.current = idea
-  // Monotonic run id — lets a new run (or reset) cancel an in-flight demo replay
-  // or SSE stream without races.
   const runIdRef = useRef(0)
+
+  // Auth guard — redirect to login if not signed in (must come after all useState/useRef)
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem("pitchcraft_user")) {
+        router.replace("/login?redirect=/generate")
+      }
+    } catch { /* ignore SSR */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Fetch available models from backend and merge with free gateway models
   useEffect(() => {
