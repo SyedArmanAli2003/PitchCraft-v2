@@ -7,7 +7,18 @@ at **$0**.
 
 ---
 
-## Architecture overview
+## Live deployment (InsForge Compute + InsForge Sites)
+
+| Service | URL |
+|---|---|
+| **Frontend** | **https://nb3y5334.insforge.site** |
+| **Backend API** | **https://pitchcraft-api-4cecea40-48ff-439f-a853-2b9029124c34.fly.dev** |
+| Health check | https://pitchcraft-api-4cecea40-48ff-439f-a853-2b9029124c34.fly.dev/api/health |
+| Agent manifest | https://pitchcraft-api-4cecea40-48ff-439f-a853-2b9029124c34.fly.dev/api/agent/manifest |
+| InsForge Dashboard | https://insforge.dev/dashboard/project/4cecea40-48ff-439f-a853-2b9029124c34 |
+
+---
+
 
 ```
 Browser ──► Vercel (Next.js)  ──► InsForge Compute/Fly.io (FastAPI)

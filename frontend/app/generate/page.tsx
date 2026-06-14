@@ -52,6 +52,42 @@ const FALLBACK_MODELS: ModelOption[] = [
     description: "Most powerful — requires billing account",
     quota_status: "pro_only",
   },
+  {
+    key: "insforge-gateway",
+    display: "InsForge AI (Free)",
+    tier: 6,
+    badge: "Free Gateway",
+    description: "Gemma 4 31B via InsForge Model Gateway — always free",
+    quota_status: "ok",
+  },
+  {
+    key: "nvidia-llama",
+    display: "NVIDIA Llama 3.3 70B",
+    tier: 7,
+    badge: "NVIDIA NIM Free",
+    description: "Dedicated free endpoint — no quota limits",
+    quota_status: "ok",
+  },
+]
+
+// Extra free models that the backend supports but the /api/models endpoint may not return
+const FREE_GATEWAY_MODELS: ModelOption[] = [
+  {
+    key: "insforge-gateway",
+    display: "InsForge AI (Free)",
+    tier: 6,
+    badge: "Free Gateway",
+    description: "Gemma 4 31B via InsForge Model Gateway — always free",
+    quota_status: "ok",
+  },
+  {
+    key: "nvidia-llama",
+    display: "NVIDIA Llama 3.3 70B",
+    tier: 7,
+    badge: "NVIDIA NIM Free",
+    description: "Dedicated free NVIDIA endpoint — no quota issues",
+    quota_status: "ok",
+  },
 ]
 
 // ── Demo / offline fallback ──────────────────────────────────────────────────
@@ -178,28 +214,34 @@ const DEMO_PLAN: { idea: string; steps: Array<{ step: number; name: string; data
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
-const MODEL_ICONS: Partial<Record<ModelKey, string>> = {
+const MODEL_ICONS: Partial<Record<string, string>> = {
   "gemini-3.5-flash":       "◈",
   "gemini-3.1-flash-lite":  "✧",
   "gemini-2.5-flash-lite":  "▸",
   "gemini-2.5-flash":       "⚡",
   "gemini-2.5-pro":         "★",
+  "insforge-gateway":       "◆",
+  "nvidia-llama":           "▲",
 }
 
-const MODEL_BADGES: Partial<Record<ModelKey, { label: string; color: string; bg: string; border: string }>> = {
-  "gemini-3.5-flash":       { label: "✅ Recommended · Working",     color: "hsl(160,90%,72%)",  bg: "rgba(34,197,94,0.12)",  border: "rgba(34,197,94,0.35)"   },
-  "gemini-3.1-flash-lite":  { label: "✅ Fast · Working",            color: "hsl(213,95%,78%)",  bg: "rgba(59,130,246,0.12)", border: "rgba(59,130,246,0.35)"  },
-  "gemini-2.5-flash-lite":  { label: "✅ Stable · Working",          color: "hsl(258,80%,78%)",  bg: "rgba(124,58,237,0.12)", border: "rgba(124,58,237,0.3)"   },
-  "gemini-2.5-flash":       { label: "⚠️ May timeout under load",   color: "hsl(38,95%,72%)",   bg: "rgba(234,179,8,0.12)",  border: "rgba(234,179,8,0.35)"  },
-  "gemini-2.5-pro":         { label: "🔒 Requires billing account",  color: "hsl(280,90%,82%)",  bg: "rgba(168,85,247,0.12)", border: "rgba(168,85,247,0.35)" },
+const MODEL_BADGES: Partial<Record<string, { label: string; color: string; bg: string; border: string }>> = {
+  "gemini-3.5-flash":       { label: "✅ Recommended · Working",          color: "hsl(160,90%,72%)",  bg: "rgba(34,197,94,0.12)",   border: "rgba(34,197,94,0.35)"   },
+  "gemini-3.1-flash-lite":  { label: "✅ Fast · Working",                 color: "hsl(213,95%,78%)",  bg: "rgba(59,130,246,0.12)",  border: "rgba(59,130,246,0.35)"  },
+  "gemini-2.5-flash-lite":  { label: "✅ Stable · Working",               color: "hsl(258,80%,78%)",  bg: "rgba(124,58,237,0.12)",  border: "rgba(124,58,237,0.3)"   },
+  "gemini-2.5-flash":       { label: "⚠️ May timeout under load",        color: "hsl(38,95%,72%)",   bg: "rgba(234,179,8,0.12)",   border: "rgba(234,179,8,0.35)"   },
+  "gemini-2.5-pro":         { label: "🔒 Requires billing account",       color: "hsl(280,90%,82%)",  bg: "rgba(168,85,247,0.12)",  border: "rgba(168,85,247,0.35)"  },
+  "insforge-gateway":       { label: "◆ InsForge · Always Free",          color: "rgb(52,211,153)",   bg: "rgba(16,185,129,0.12)",  border: "rgba(16,185,129,0.3)"   },
+  "nvidia-llama":           { label: "▲ NVIDIA NIM · Free Dedicated",     color: "hsl(120,60%,70%)",  bg: "rgba(34,197,94,0.1)",    border: "rgba(34,197,94,0.3)"    },
 }
 
-const MODEL_DESC: Partial<Record<ModelKey, string>> = {
+const MODEL_DESC: Partial<Record<string, string>> = {
   "gemini-3.5-flash":       "Latest Gemini Flash — confirmed working. Best quality output.",
   "gemini-3.1-flash-lite":  "Lightweight Gemini 3.1 — fast, reliable, separate quota pool.",
   "gemini-2.5-flash-lite":  "Gemini 2.5 Flash Lite — solid reasoning, stable free-tier quota.",
   "gemini-2.5-flash":       "Deep reasoning model — may time out under high load. Try if others fail.",
   "gemini-2.5-pro":         "Most powerful model — requires a Google Cloud billing account (paid tier).",
+  "insforge-gateway":       "Gemma 4 31B via InsForge Model Gateway — always free, no quota worries.",
+  "nvidia-llama":           "NVIDIA Llama 3.3 70B via NIM — dedicated free inference endpoint.",
 }
 
 function ModelSelector({
@@ -209,14 +251,14 @@ function ModelSelector({
   disabled,
 }: {
   models: ModelOption[]
-  selected: ModelKey
+  selected: string
   onChange: (k: ModelKey) => void
   disabled: boolean
 }) {
   return (
     <div className="mb-6">
       <p className="text-xs uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.35)" }}>
-        Choose Gemini Model
+        Choose AI Model
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {models.map(m => {
@@ -276,6 +318,16 @@ function GenerateContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [idea, setIdea]              = useState("")
+
+  // Auth guard — redirect to login if not signed in
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem("pitchcraft_user")) {
+        router.replace("/login?redirect=/generate")
+      }
+    } catch { /* ignore SSR */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [submitted, setSubmitted]    = useState(false)
   const [steps, setSteps]            = useState<AgentStep[]>([])
   const [planId, setPlanId]          = useState<string | null>(null)
@@ -303,12 +355,19 @@ function GenerateContent() {
   // or SSE stream without races.
   const runIdRef = useRef(0)
 
-  // Fetch available models from backend
+  // Fetch available models from backend and merge with free gateway models
   useEffect(() => {
     fetch(API.models)
       .then(r => r.json())
-      .then(d => { if (d.models?.length) setModels(d.models) })
-      .catch(() => { /* use fallback */ })
+      .then(d => {
+        if (d.models?.length) {
+          // Merge: backend Gemini models first, then append free gateway models
+          const backendKeys = new Set((d.models as ModelOption[]).map(m => m.key))
+          const extra = FREE_GATEWAY_MODELS.filter(m => !backendKeys.has(m.key))
+          setModels([...d.models, ...extra])
+        }
+      })
+      .catch(() => { /* use FALLBACK_MODELS */ })
   }, [])
 
   // Demo mode + idea prefill from landing-page example cards (?idea=...)

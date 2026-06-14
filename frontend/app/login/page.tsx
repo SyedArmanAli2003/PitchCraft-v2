@@ -1,78 +1,132 @@
 "use client"
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { insforge } from "@/lib/insforge"
 
-function saveUser(name: string, email: string) {
-  const initials = name
-    .trim()
-    .split(/\s+/)
-    .map(n => n[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase()
-  localStorage.setItem(
-    "pitchcraft_user",
-    JSON.stringify({ name: name.trim(), email: email.trim(), initials })
-  )
+function saveUserLocally(user: { id?: string; email?: string; name?: string; accessToken?: string }) {
+  const name = user.name || user.email?.split("@")[0] || "User"
+  const initials = name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
+  localStorage.setItem("pitchcraft_user", JSON.stringify({
+    name, email: user.email || "", initials, id: user.id, accessToken: user.accessToken,
+  }))
 }
 
-export default function LoginPage() {
-  const router = useRouter()
-  const [mode, setMode]         = useState<"signin" | "signup">("signin")
-  const [name, setName]         = useState("")
-  const [email, setEmail]       = useState("")
-  const [password, setPassword] = useState("")
-  const [loading, setLoading]   = useState(false)
-  const [error, setError]       = useState("")
+// InsForge needs the redirect URL added to allowedRedirectUrls in the dashboard.
+// Go to InsForge Dashboard → Auth → Settings → add this URL:
+//   https://nb3y5334.insforge.site/auth/callback
+const OAUTH_CALLBACK = typeof window !== "undefined"
+  ? `${window.location.origin}/auth/callback`
+  : "https://nb3y5334.insforge.site/auth/callback"
 
-  // Redirect if already logged in
+function LoginContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [mode, setMode] = useState<"signin" | "signup">("signin")
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
+  const [error, setError] = useState("")
+
+  const redirectTo = searchParams.get("redirect") || "/generate"
+
   useEffect(() => {
+    const errParam = searchParams.get("error")
+    if (errParam === "auth_failed") setError("Google sign-in failed. Please try again or use email.")
     try {
-      if (localStorage.getItem("pitchcraft_user")) router.replace("/generate")
+      if (localStorage.getItem("pitchcraft_user")) router.replace(redirectTo)
     } catch { /* ignore */ }
-  }, [router])
+  }, [router, redirectTo, searchParams])
+
+  const handleGoogle = async () => {
+    if (!insforge) { setError("Auth not configured"); return }
+    setError(""); setGoogleLoading(true)
+    try {
+      // Generate PKCE verifier
+      const array = new Uint8Array(32)
+      crypto.getRandomValues(array)
+      const verifier = btoa(Array.from(array, b => String.fromCharCode(b)).join("")).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "")
+      sessionStorage.setItem("pkce_verifier", verifier)
+      sessionStorage.setItem("oauth_redirect", redirectTo)
+      const hashBuffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))
+      const challenge = btoa(Array.from(new Uint8Array(hashBuffer), b => String.fromCharCode(b)).join("")).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "")
+
+      const result = await insforge.auth.signInWithOAuth("google", {
+        redirectTo: OAUTH_CALLBACK,
+        additionalParams: { code_challenge: challenge, code_challenge_method: "S256" },
+      })
+      if (result?.data?.url) {
+        window.location.href = result.data.url
+      } else {
+        setError("Could not initiate Google sign-in.")
+        setGoogleLoading(false)
+      }
+    } catch (e: unknown) {
+      setError((e as { message?: string })?.message || "Google sign-in failed. Please use email instead.")
+      setGoogleLoading(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     if (!email.includes("@")) { setError("Enter a valid email address."); return }
-    if (password.length < 6)  { setError("Password must be at least 6 characters."); return }
+    if (password.length < 6) { setError("Password must be at least 6 characters."); return }
     if (mode === "signup" && !name.trim()) { setError("Please enter your name."); return }
+    if (!insforge) { setError("Auth not configured"); return }
 
     setLoading(true)
-    await new Promise(r => setTimeout(r, 700))
-    const displayName = mode === "signup" ? name : email.split("@")[0]
-    saveUser(displayName, email)
-    setLoading(false)
-    router.push("/generate")
-  }
-
-  const handleGoogle = () => {
-    setError("Google sign-in is coming soon. Please use email for now.")
+    try {
+      if (mode === "signup") {
+        const result = await insforge.auth.signUp({ email, password, name: name.trim() })
+        if (!result?.data?.user) throw new Error("Sign up failed")
+        // Attempt sign-in immediately after signup
+        const signInResult = await insforge.auth.signInWithPassword({ email, password })
+        if (signInResult?.data?.user) {
+          saveUserLocally({ ...signInResult.data.user, name: name.trim(), accessToken: signInResult.data.accessToken })
+          router.replace(redirectTo)
+        } else {
+          setError("Account created! Please sign in.")
+          setMode("signin")
+        }
+      } else {
+        const result = await insforge.auth.signInWithPassword({ email, password })
+        if (!result?.data?.user) throw new Error("Invalid email or password")
+        saveUserLocally({ ...result.data.user, accessToken: result.data.accessToken })
+        router.replace(redirectTo)
+      }
+    } catch (e: unknown) {
+      const msg = (e as { message?: string })?.message || "Sign in failed"
+      if (msg.includes("INVALID_CREDENTIALS") || msg.includes("Invalid")) {
+        setError("Invalid email or password.")
+      } else if (msg.includes("USER_EXISTS") || msg.includes("already")) {
+        setError("An account with this email already exists. Please sign in.")
+        setMode("signin")
+      } else if (msg.includes("EMAIL_NOT_VERIFIED")) {
+        setError("Please verify your email first. Check your inbox.")
+      } else {
+        setError(msg)
+      }
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center px-4 py-16"
-      style={{ background: "hsl(240,25%,4%)" }}
-    >
-      {/* Back link */}
-      <a
-        href="/"
-        className="fixed top-5 left-8 text-sm no-underline transition-colors"
+    <div className="min-h-screen flex items-center justify-center px-4 py-16" style={{ background: "hsl(240,25%,4%)" }}>
+      <a href="/" className="fixed top-5 left-8 text-sm no-underline transition-colors"
         style={{ color: "rgba(255,255,255,0.32)" }}
         onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.65)")}
-        onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.32)")}
-      >
+        onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.32)")}>
         ← PitchCraft
       </a>
 
       <div className="w-full max-w-sm">
-        {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-1.5 mb-6 cursor-pointer" onClick={() => router.push("/")}>
             <span style={{ color: "hsl(258,90%,66%)", fontSize: "1.5rem" }}>✦</span>
-            <span className="text-2xl font-semibold" style={{ color: "white" }}>
+            <span className="text-2xl font-semibold text-white">
               Pitch<span style={{ color: "hsl(258,90%,66%)" }}>Craft</span>
             </span>
           </div>
@@ -80,32 +134,24 @@ export default function LoginPage() {
             {mode === "signin" ? "Welcome back" : "Create your account"}
           </h1>
           <p className="text-sm" style={{ color: "rgba(255,255,255,0.38)" }}>
-            {mode === "signin"
-              ? "Sign in to generate business plans"
-              : "Free during the Google Cloud Hackathon"}
+            {mode === "signin" ? "Sign in to generate business plans" : "Free account — no credit card needed"}
           </p>
         </div>
 
-        {/* Card */}
-        <div
-          className="rounded-2xl p-7"
-          style={{ background: "hsl(240,15%,8%)", border: "1px solid rgba(255,255,255,0.08)" }}
-        >
-          {/* Google button */}
+        <div className="rounded-2xl p-7" style={{ background: "hsl(240,15%,8%)", border: "1px solid rgba(255,255,255,0.08)" }}>
+          {/* Google OAuth button */}
           <button
             type="button"
             onClick={handleGoogle}
-            className="w-full flex items-center justify-center gap-3 py-3 rounded-xl text-sm font-medium cursor-pointer transition-all mb-5"
-            style={{
-              background: "rgba(255,255,255,0.06)",
-              color: "rgba(255,255,255,0.78)",
-              border: "1px solid rgba(255,255,255,0.1)",
-            }}
+            disabled={googleLoading || loading}
+            className="w-full flex items-center justify-center gap-3 py-3 rounded-xl text-sm font-medium cursor-pointer transition-all mb-5 disabled:opacity-60"
+            style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.78)", border: "1px solid rgba(255,255,255,0.1)" }}
             onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.09)")}
-            onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
-          >
-            <GoogleIcon />
-            Continue with Google
+            onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}>
+            {googleLoading
+              ? <span className="w-4 h-4 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(255,255,255,0.3)", borderTopColor: "white" }} />
+              : <GoogleIcon />}
+            {googleLoading ? "Redirecting to Google…" : "Continue with Google"}
           </button>
 
           <div className="flex items-center gap-3 mb-5">
@@ -124,14 +170,13 @@ export default function LoginPage() {
                     onChange={e => setName(e.target.value)}
                     placeholder="Alex Johnson"
                     autoComplete="name"
-                    className="w-full rounded-lg px-4 py-3 text-sm text-white outline-none transition-colors"
+                    className="w-full rounded-lg px-4 py-3 text-sm text-white outline-none"
                     style={{ background: "hsl(240,15%,6%)", border: "1px solid rgba(255,255,255,0.08)", caretColor: "hsl(258,90%,66%)" }}
                     onFocus={e => (e.target.style.borderColor = "rgba(124,58,237,0.5)")}
                     onBlur={e => (e.target.style.borderColor = "rgba(255,255,255,0.08)")}
                   />
                 </FieldGroup>
               )}
-
               <FieldGroup label="Email">
                 <input
                   type="email"
@@ -140,13 +185,12 @@ export default function LoginPage() {
                   placeholder="you@example.com"
                   autoComplete="email"
                   required
-                  className="w-full rounded-lg px-4 py-3 text-sm text-white outline-none transition-colors"
+                  className="w-full rounded-lg px-4 py-3 text-sm text-white outline-none"
                   style={{ background: "hsl(240,15%,6%)", border: "1px solid rgba(255,255,255,0.08)", caretColor: "hsl(258,90%,66%)" }}
                   onFocus={e => (e.target.style.borderColor = "rgba(124,58,237,0.5)")}
                   onBlur={e => (e.target.style.borderColor = "rgba(255,255,255,0.08)")}
                 />
               </FieldGroup>
-
               <FieldGroup label="Password">
                 <input
                   type="password"
@@ -155,7 +199,7 @@ export default function LoginPage() {
                   placeholder="••••••••"
                   autoComplete={mode === "signin" ? "current-password" : "new-password"}
                   required
-                  className="w-full rounded-lg px-4 py-3 text-sm text-white outline-none transition-colors"
+                  className="w-full rounded-lg px-4 py-3 text-sm text-white outline-none"
                   style={{ background: "hsl(240,15%,6%)", border: "1px solid rgba(255,255,255,0.08)", caretColor: "hsl(258,90%,66%)" }}
                   onFocus={e => (e.target.style.borderColor = "rgba(124,58,237,0.5)")}
                   onBlur={e => (e.target.style.borderColor = "rgba(255,255,255,0.08)")}
@@ -164,42 +208,32 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <p className="text-xs mt-3" style={{ color: "rgb(252,165,165)" }}>
-                ⚠ {error}
-              </p>
+              <p className="text-xs mt-3" style={{ color: "rgb(252,165,165)" }}>⚠ {error}</p>
             )}
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || googleLoading}
               className="w-full mt-5 py-3.5 rounded-xl font-semibold text-white text-sm cursor-pointer transition-all disabled:opacity-55 disabled:cursor-not-allowed"
               style={{ background: "hsl(258,85%,64%)" }}
               onMouseEnter={e => !loading && (e.currentTarget.style.boxShadow = "0 0 24px rgba(124,58,237,0.4)")}
-              onMouseLeave={e => (e.currentTarget.style.boxShadow = "none")}
-            >
-              {loading
-                ? "Just a moment…"
-                : mode === "signin"
-                ? "Sign in →"
-                : "Create account →"}
+              onMouseLeave={e => (e.currentTarget.style.boxShadow = "none")}>
+              {loading ? "Just a moment…" : mode === "signin" ? "Sign in →" : "Create account →"}
             </button>
           </form>
         </div>
 
-        {/* Toggle */}
         <p className="text-center text-sm mt-5" style={{ color: "rgba(255,255,255,0.38)" }}>
           {mode === "signin" ? "Don't have an account? " : "Already have an account? "}
           <button
             onClick={() => { setMode(m => m === "signin" ? "signup" : "signin"); setError("") }}
             className="cursor-pointer font-medium"
-            style={{ color: "hsl(258,80%,78%)", background: "none", border: "none" }}
-          >
+            style={{ color: "hsl(258,80%,78%)", background: "none", border: "none" }}>
             {mode === "signin" ? "Sign up free" : "Sign in"}
           </button>
         </p>
-
         <p className="text-center text-xs mt-6" style={{ color: "rgba(255,255,255,0.18)" }}>
-          No credit card · No verification · Built for Google Cloud Hackathon 2026
+          Powered by InsForge · InsForge Launch Week 2 Hackathon 2026
         </p>
       </div>
     </div>
@@ -209,9 +243,7 @@ export default function LoginPage() {
 function FieldGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-xs mb-1.5" style={{ color: "rgba(255,255,255,0.42)" }}>
-        {label}
-      </label>
+      <label className="block text-xs mb-1.5" style={{ color: "rgba(255,255,255,0.42)" }}>{label}</label>
       {children}
     </div>
   )
@@ -225,5 +257,13 @@ function GoogleIcon() {
       <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
       <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
     </svg>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div style={{ background: "hsl(240,25%,4%)", minHeight: "100vh" }} />}>
+      <LoginContent />
+    </Suspense>
   )
 }

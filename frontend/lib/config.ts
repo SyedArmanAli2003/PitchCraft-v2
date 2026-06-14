@@ -37,6 +37,8 @@ export type ModelKey =
   | "gemini-2.5-flash-lite"
   | "gemini-2.5-flash"
   | "gemini-2.5-pro"
+  | "insforge-gateway"
+  | "nvidia-llama"
 
 export interface ModelOption {
   key: ModelKey

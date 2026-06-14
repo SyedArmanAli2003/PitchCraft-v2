@@ -22,6 +22,7 @@ from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from models import IdeaRequest, ApprovalDecision
+from pydantic import BaseModel
 from agent import (
     run_pitchcraft_agent, get_models_list, _load_api_keys, get_agent_manifest,
     insforge_gateway_ready,
@@ -85,7 +86,7 @@ _explicit_origins = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_explicit_origins,
-    allow_origin_regex=r"https://.*\.(vercel\.app|run\.app|up\.railway\.app)",
+    allow_origin_regex=r"https://.*\.(vercel\.app|run\.app|up\.railway\.app|insforge\.site|fly\.dev)",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -378,6 +379,92 @@ async def mcp_call(req: dict):
     if not tool:
         raise HTTPException(status_code=400, detail="Provide a 'tool' name")
     return {"tool": tool, "result": await call_mcp_tool(tool, (req or {}).get("arguments") or {})}
+
+
+# ---------------------------------------------------------------------------
+# Shark Tank Simulator endpoint
+# ---------------------------------------------------------------------------
+
+class SharkTankRequest(BaseModel):
+    plan_context: dict
+    sharks: list[dict]
+
+
+@app.post("/api/shark-tank")
+async def shark_tank_sim(req: SharkTankRequest):
+    """Run AI-powered shark tank simulation using the free model cascade."""
+    try:
+        keys = _load_api_keys()
+    except Exception:
+        keys = []
+
+    ctx = req.plan_context
+    ask_str = ctx.get('funding_needed', '$250,000 for 10% equity')
+    valuation = ctx.get('implied_valuation', 'N/A')
+    score = ctx.get('viability_score', 7)
+
+    prompt = f"""You are directing a Shark Tank / Dragons Den pitch session. Give realistic, specific reactions with genuine investor logic.
+
+STARTUP PITCH:
+Idea: {ctx.get('idea', 'N/A')}
+Problem: {ctx.get('problem', 'N/A')}
+Solution: {ctx.get('solution', 'N/A')}
+USP: {ctx.get('usp', 'N/A')}
+Viability Score: {score}/10
+Market Size: {ctx.get('market_size', 'N/A')} growing at {ctx.get('growth_rate', 'N/A')}
+Revenue Model: {ctx.get('revenue_model', 'N/A')}
+Year 1 Revenue Target: {ctx.get('year1_revenue', 'N/A')}
+The Ask: {ask_str}
+Implied Valuation: {valuation}
+
+SHARKS (5 investors, each with distinct personality):
+{chr(10).join(f"{i+1}. {s['name']} ({s['style']}): {s['trait']}" for i, s in enumerate(req.sharks))}
+
+Rules for generating realistic reactions:
+- Score < 5 = most sharks OUT (too early/risky)
+- Score 5-6 = mixed reactions, sharks want proof
+- Score 7-8 = positive interest, reasonable counter-offers likely
+- Score 9-10 = strong interest, bidding war possible
+- Valuation > $10M at pre-revenue = most sharks skeptical
+- Revenue model unclear = operational/strategic sharks OUT
+- Strong tech angle = tech-focused shark excited
+- Each shark MUST stay in character per their trait description
+- Comments must be 1-3 sentences max, specific to THIS pitch (mention numbers/details from the pitch)
+- Counter offers must include specific percentage and dollar amounts
+
+Return ONLY valid JSON:
+{{
+  "reactions": [
+    {{
+      "shark": "exact shark name",
+      "verdict": "IN",
+      "comment": "specific in-character reaction mentioning details from this pitch",
+      "counter_offer": null
+    }},
+    {{
+      "shark": "exact shark name",
+      "verdict": "COUNTER",
+      "comment": "specific reaction",
+      "counter_offer": "I'll invest $X for Y% — that values you at $Z. My final offer."
+    }},
+    {{
+      "shark": "exact shark name",
+      "verdict": "OUT",
+      "comment": "specific reason for passing, mentioning details",
+      "counter_offer": null
+    }}
+  ]
+}}"""
+
+    from agent import _generate
+    try:
+        result, _ = await _generate(prompt, "gemini-3.5-flash", keys)
+        reactions = result.get("reactions", [])
+        if not reactions or len(reactions) < 3:
+            raise ValueError("Incomplete reactions")
+        return {"reactions": reactions}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":

@@ -55,3 +55,15 @@ runner_dir.txt
 .roo
 .trae
 .windsurf
+_docker_build.txt
+_build.txt
+_deploy.env
+.gitignore
+_flyctl_install.txt
+backend/fly.toml
+.gitignore
+_compute_deploy.txt
+_fe2.txt
+_frontend_deploy.txt
+_redeploy.txt
+_verify.txt

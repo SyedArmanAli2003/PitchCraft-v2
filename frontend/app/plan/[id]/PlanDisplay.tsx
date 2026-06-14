@@ -362,11 +362,11 @@ function RoadmapTab({ plan }: { plan: BusinessPlan }) {
 
 // ── Shark Tank Simulator Tab ────────────────────────────────────────────────────
 const SHARKS = [
-  { name: "Mark C.",   icon: "👆", style: "tough",        color: "rgba(239,68,68,0.8)",   bg: "rgba(239,68,68,0.07)",   trait: "Demands proof of traction and ruthless unit economics." },
-  { name: "Sarah K.",  icon: "🦌", style: "strategic",   color: "rgba(59,130,246,0.8)",  bg: "rgba(59,130,246,0.07)",  trait: "Looks for defensible moats and brand-building potential." },
-  { name: "Raj P.",    icon: "🥁", style: "tech-focused", color: "rgba(124,58,237,0.8)",  bg: "rgba(124,58,237,0.07)",  trait: "Obsessed with AI, scalability and recurring revenue." },
-  { name: "Lisa T.",   icon: "🌟", style: "empathetic",   color: "rgba(234,179,8,0.8)",   bg: "rgba(234,179,8,0.07)",   trait: "Connects emotionally with the story and founding team." },
-  { name: "Carlos M.", icon: "💼", style: "operational",  color: "rgba(34,197,94,0.8)",   bg: "rgba(34,197,94,0.07)",   trait: "Focuses on supply chain, operations and margins." },
+  { name: "Mark C.",   icon: "⚡", style: "tough",        color: "rgba(239,68,68,0.8)",   bg: "rgba(239,68,68,0.07)",   trait: "Demands proof of traction and ruthless unit economics. Will negotiate hard." },
+  { name: "Sarah K.",  icon: "🎯", style: "strategic",    color: "rgba(59,130,246,0.8)",  bg: "rgba(59,130,246,0.07)",  trait: "Looks for defensible moats, brand-building potential, and long-term vision." },
+  { name: "Raj P.",    icon: "💡", style: "tech-focused", color: "rgba(124,58,237,0.8)",  bg: "rgba(124,58,237,0.07)",  trait: "Obsessed with AI, scalability, and recurring revenue. Excited by technical differentiation." },
+  { name: "Lisa T.",   icon: "🌟", style: "empathetic",   color: "rgba(234,179,8,0.8)",   bg: "rgba(234,179,8,0.07)",   trait: "Connects emotionally with the founder story and social impact. Values authenticity." },
+  { name: "Carlos M.", icon: "📊", style: "operational",  color: "rgba(34,197,94,0.8)",   bg: "rgba(34,197,94,0.07)",   trait: "Focuses on supply chain, margins, operational efficiency, and unit economics." },
 ]
 
 type Reaction = { shark: string; verdict: "IN" | "OUT" | "COUNTER"; comment: string; counter_offer?: string }
@@ -408,7 +408,8 @@ function SharkTankTab({ plan }: { plan: BusinessPlan }) {
     }
     // Simulate each shark via the backend
     try {
-      const res = await fetch(`/api/shark-tank`, {
+      const API_BASE = process.env.NEXT_PUBLIC_API_BASE || ""
+      const res = await fetch(`${API_BASE}/api/shark-tank`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan_context: ctx, sharks: SHARKS.map(s => ({ name: s.name, style: s.style, trait: s.trait })) }),
@@ -474,13 +475,32 @@ function SharkTankTab({ plan }: { plan: BusinessPlan }) {
     <div className="space-y-6">
       {/* Header */}
       <div className="rounded-2xl p-6" style={{ background: "linear-gradient(135deg,rgba(234,179,8,0.12),rgba(239,68,68,0.08))", border: "1px solid rgba(234,179,8,0.3)" }}>
-        <div className="flex items-center gap-3 mb-2">
+        <div className="flex items-center gap-3 mb-3">
           <span className="text-2xl">🦈</span>
           <div>
             <h2 className="text-lg font-bold text-white">Shark Tank Simulator</h2>
-            <p className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>Pitch your startup to 5 AI Sharks. Get a deal or go home.</p>
+            <p className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>AI-powered investor reactions based on your actual business plan.</p>
           </div>
         </div>
+        {/* Pre-pitch checklist */}
+        {v && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+            {[
+              { label: "Viability", val: `${v.viability_score}/10`, ok: v.viability_score >= 6, tip: "Score ≥ 6 needed" },
+              { label: "Market", val: m?.market_size?.slice(0,12) ?? "—", ok: !!m?.market_size, tip: "Market size known" },
+              { label: "Revenue Model", val: b?.revenue_model ? "✓ Defined" : "✗ Missing", ok: !!b?.revenue_model, tip: "Needs clear model" },
+              { label: "Funding Ask", val: f?.funding_needed ?? "Set below", ok: !!f?.funding_needed, tip: "Need a clear ask" },
+            ].map(item => (
+              <div key={item.label} className="rounded-xl p-3 text-center"
+                style={{ background: item.ok ? "rgba(34,197,94,0.08)" : "rgba(239,68,68,0.08)", border: `1px solid ${item.ok ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}` }}>
+                <p className="text-xs mb-1" style={{ color: item.ok ? "rgb(74,222,128)" : "rgb(252,165,165)" }}>
+                  {item.ok ? "✓" : "✗"} {item.label}
+                </p>
+                <p className="text-xs font-semibold" style={{ color: "rgba(255,255,255,0.8)" }}>{item.val}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Pitch Setup */}
@@ -518,7 +538,7 @@ function SharkTankTab({ plan }: { plan: BusinessPlan }) {
           className="w-full py-3.5 rounded-xl font-bold text-sm cursor-pointer transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           style={{ background: "linear-gradient(135deg,rgba(239,68,68,0.9),rgba(234,179,8,0.8))", color: "white", boxShadow: "0 0 24px rgba(239,68,68,0.3)" }}
         >
-          {loading ? "⏳ Sharks are deliberating..." : pitched ? "🔄 Pitch Again" : "🎙 Step Into the Tank"}
+          {loading ? "🤖 AI sharks are deliberating (15-30s)..." : pitched ? "🔄 Pitch Again" : "🎙 Step Into the Tank"}
         </button>
       </div>
 
@@ -585,6 +605,74 @@ function SharkTankTab({ plan }: { plan: BusinessPlan }) {
                 </div>
               )
             })}
+          </div>
+
+          {/* Negotiation Action Plan */}
+          <div className="rounded-2xl p-6" style={{ background: "hsl(240,15%,8%)", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <p className="text-xs uppercase tracking-widest mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>
+              📋 Negotiation Action Plan
+            </p>
+            {inCount + counterCount >= 3 ? (
+              <div className="space-y-3">
+                <p className="text-sm font-semibold" style={{ color: "rgb(74,222,128)" }}>You likely have a deal. Here&apos;s how to close it:</p>
+                {[
+                  "Prepare a one-page term sheet with clear milestones",
+                  "Get a lawyer to review any counter-offer terms",
+                  "Schedule individual follow-up calls within 48 hours",
+                  "Prepare 3 months of detailed financials to answer due diligence",
+                  "Have a clear use-of-funds breakdown ready",
+                ].map((action, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <span className="w-5 h-5 rounded flex-shrink-0 flex items-center justify-center text-xs font-bold mt-0.5"
+                      style={{ background: "rgba(34,197,94,0.15)", color: "rgb(74,222,128)" }}>{i + 1}</span>
+                    <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>{action}</p>
+                  </div>
+                ))}
+              </div>
+            ) : inCount + counterCount >= 1 ? (
+              <div className="space-y-4">
+                <p className="text-sm font-semibold" style={{ color: "rgb(250,204,21)" }}>You have counter-offers. Here&apos;s your negotiation playbook:</p>
+                {reactions.filter(r => r.verdict === "COUNTER").map((r, i) => (
+                  <div key={i} className="rounded-xl p-4" style={{ background: "rgba(234,179,8,0.07)", border: "1px solid rgba(234,179,8,0.2)" }}>
+                    <p className="text-xs font-semibold mb-2" style={{ color: "rgb(250,204,21)" }}>{r.shark}&apos;s counter: {r.counter_offer}</p>
+                    <p className="text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>
+                      Tactic: Acknowledge the counter, ask for 48 hours to review with your co-founder, then come back with a structured compromise that splits the difference.
+                    </p>
+                  </div>
+                ))}
+                <div className="space-y-2">
+                  {[
+                    "Never accept a counter in the room — always ask for time to review",
+                    "A BATNA (best alternative) makes you stronger at the table",
+                    "Counter back with value-adds: board seat, advisory role, milestone-based vesting",
+                  ].map((tip, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <span className="text-xs mt-0.5" style={{ color: "rgba(250,204,21,0.6)" }}>→</span>
+                      <p className="text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>{tip}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm font-semibold" style={{ color: "rgb(252,165,165)" }}>All sharks passed. Here&apos;s what to fix:</p>
+                {[
+                  v && v.viability_score < 7
+                    ? `Improve viability: score is ${v.viability_score}/10. Get 5 customer interviews proving willingness to pay.`
+                    : null,
+                  `Reduce your ask or valuation — ${impliedValuation} may be too early for this stage.`,
+                  "Get 3 months of real traction data before pitching again (users, revenue, or letters of intent).",
+                  "Revisit your revenue model — make unit economics crystal clear.",
+                  "Come back in 90 days with a stronger deck and proof points.",
+                ].filter(Boolean).map((action, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <span className="w-5 h-5 rounded flex-shrink-0 flex items-center justify-center text-xs font-bold mt-0.5"
+                      style={{ background: "rgba(239,68,68,0.15)", color: "rgb(252,165,165)" }}>{i + 1}</span>
+                    <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>{action}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </>
       )}

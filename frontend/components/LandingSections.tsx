@@ -447,6 +447,13 @@ export function FooterSection() {
         <p className="text-xs" style={{ color: "rgba(255,255,255,0.18)" }}>
           InsForge Launch Week 2 Hackathon 2026 · Realtime · Model Gateway · Auth · Postgres
         </p>
+        <a href="/admin"
+          className="text-xs mt-2 inline-block transition-colors"
+          style={{ color: "rgba(255,255,255,0.1)" }}
+          onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.35)")}
+          onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.1)")}>
+          🛡 Admin
+        </a>
       </div>
     </footer>
   )
