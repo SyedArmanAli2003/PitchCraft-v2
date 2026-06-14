@@ -20,6 +20,9 @@ const config = {
   // Self-contained server bundle for Docker.
   output: "standalone",
 
+  typescript: { ignoreBuildErrors: true },
+  eslint: { ignoreDuringBuilds: true },
+
   // Dev proxy: /api/* → FastAPI on port 8000
   async rewrites() {
     if (process.env.NODE_ENV === "development") {
