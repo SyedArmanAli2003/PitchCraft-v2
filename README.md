@@ -10,8 +10,9 @@
 
 ![Gemini](https://img.shields.io/badge/Gemini-3.5%20Flash%20%2B%20cascade-7c3aed)
 ![Google ADK](https://img.shields.io/badge/Google%20ADK-LlmAgent%20%2B%20SequentialAgent-4285F4)
-![InsForge](https://img.shields.io/badge/InsForge-Postgres%20%2B%20Realtime%20%2B%20Auth-06b6d4)
+![InsForge](https://img.shields.io/badge/InsForge-Postgres%20%2B%20Realtime%20%2B%20Auth%20%2B%20AI-06b6d4)
 ![NVIDIA NIM](https://img.shields.io/badge/NVIDIA%20NIM-Llama%203.3%2070B-76b900)
+![OpenRouter](https://img.shields.io/badge/OpenRouter-Free%20Models-FF6B6B)
 ![Arize Phoenix](https://img.shields.io/badge/Arize-Phoenix%20OpenInference-ff6a00)
 ![Next.js 14](https://img.shields.io/badge/Next.js-14-000000)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green)
@@ -137,6 +138,20 @@ Every step's output is hashed into a **SHA-256 chain** anchored to a genesis has
 ### ⏸ Human-in-the-loop approval gate
 The agent doesn't run away with your idea. After market research it **pauses mid-stream**, keeps the connection warm with heartbeats, and waits for a decision — **approve**, **reject & stop**, or **redirect** ("focus on B2B enterprise"). The redirect is injected into the remaining steps. Set `SKIP_APPROVAL=true` to auto-approve after 3 s for demos/CI.
 
+### 🤖 AI Chatbot with model selection
+PitchCraft includes a floating AI assistant available on every page. Ask about your business idea, startup strategy, or how the platform works — the chatbot is powered by the same free model pool and lets you choose your preferred model on the fly:
+
+| Model | Provider |
+|---|---|
+| Llama 3.3 70B | NVIDIA NIM (dedicated free) |
+| Gemma 4 31B | OpenRouter (free) |
+| Gemma 4 26B | OpenRouter (free) |
+| GPT-OSS 120B | OpenRouter (free) |
+| Qwen3 Next 80B | OpenRouter (free) |
+| Llama 3.3 70B | OpenRouter (free) |
+
+Select your model from a dropdown in the chat header. The chat history is preserved per session so you can keep the conversation going while exploring the platform.
+
 ### 🧠 Free model cascade (zero cost)
 Pick a tier in the UI; the backend tries models in order:
 
@@ -205,7 +220,7 @@ Inspect or invoke the tools over HTTP too: `GET /api/mcp/tools`, `GET /api/mcp/d
 
 **Frontend** (`frontend/`): App-Router Next.js — `app/generate` (agent runner + gates), `app/plan/[id]` (plan + audit trail + Shark Tank simulator), `app/history` (per-user plan list), `app/admin` (admin dashboard), `app/auth` + `app/login` (InsForge Auth), `components/StepCard.tsx`, particle hero.
 
-**Tech:** Gemini (`google-genai`) · **Google ADK** (`google-adk`: `LlmAgent` + `SequentialAgent`) · **InsForge** (`@insforge/sdk` frontend, REST API backend) · NVIDIA NIM · InsForge Model Gateway (OpenRouter) · Model Context Protocol (`mcp`) · Arize Phoenix (`arize-phoenix-otel` + `openinference-instrumentation-google-genai`) · FastAPI + SSE · Next.js 14 + Tailwind + Three.js.
+**Tech:** Gemini (`google-genai`) · **Google ADK** (`google-adk`: `LlmAgent` + `SequentialAgent`) · **InsForge** (`@insforge/sdk` frontend, REST API backend, AI Gateway) · NVIDIA NIM · InsForge Model Gateway (OpenRouter free models) · OpenAI SDK · Model Context Protocol (`mcp`) · Arize Phoenix (`arize-phoenix-otel` + `openinference-instrumentation-google-genai`) · FastAPI + SSE · Next.js 14 + Tailwind + Three.js.
 
 ---
 
@@ -227,6 +242,7 @@ Inspect or invoke the tools over HTTP too: `GET /api/mcp/tools`, `GET /api/mcp/d
 | `GET`·`POST` | `/api/mcp/tools` · `/api/mcp/demo` · `/api/mcp/call` | Real MCP tool manifest, a live protocol demo, and direct tool invocation. |
 | `GET` | `/api/admin/plans` | All plans (requires `ADMIN_SECRET` header). |
 | `GET` | `/api/admin/users` | Aggregated user stats (requires `ADMIN_SECRET` header). |
+| `GET`·`POST` | `/api/chat` | AI chatbot — `GET` returns available free models, `POST` sends a chat message. |
 | `GET` | `/api/stats` · `/api/plans` · `/api/health` | Counts, recent plans, health. |
 
 ---
@@ -240,7 +256,7 @@ Inspect or invoke the tools over HTTP too: `GET /api/mcp/tools`, `GET /api/mcp/d
 cp .env.example backend/.env
 # Required: GEMINI_API_KEY_1
 # Optional: INSFORGE_URL + INSFORGE_SERVICE_KEY (for persistence)
-#           NVIDIA_NIM_API_KEY, OPENROUTER_API_KEY
+#           NVIDIA_NIM_API_KEY, OPENROUTER_API_KEY (for chatbot + fallback)
 
 # Copy frontend env (fill in InsForge anon key if using auth)
 cp .env.example frontend/.env.local
@@ -331,6 +347,8 @@ Then connect the frontend repo to Vercel and set `NEXT_PUBLIC_API_BASE` to the C
 | `NEXT_PUBLIC_INSFORGE_ANON_KEY` | ✅ | Non-expiring public token (role `anon`). Generate: `curl -X POST "$INSFORGE_URL/api/auth/tokens/anon" -H "Authorization: Bearer $INSFORGE_SERVICE_KEY"` |
 | `NEXT_PUBLIC_API_BASE` | – | Absolute backend URL for split deploys (Vercel + Cloud Run). Blank = same-origin / dev proxy. |
 | `FRONTEND_URL` | – | Your deployed URL, for server-side Next.js fetches + CORS. |
+| `OPENROUTER_API_KEY` | – | OpenRouter API key for the AI chatbot (server-side, `app/api/chat`). |
+| `NVIDIA_NIM_API_KEY` | – | NVIDIA NIM API key for the Llama 3.3 70B chat model (server-side). |
 
 ---
 
@@ -368,5 +386,5 @@ Then connect the frontend repo to Vercel and set `NEXT_PUBLIC_API_BASE` to the C
 MIT — see [LICENSE](LICENSE).
 
 <div align="center">
-<sub>Built with Google ADK · Gemini · NVIDIA NIM · InsForge · Arize Phoenix — for the Google Cloud Rapid Agent Hackathon.</sub>
+<sub>Built with Google ADK · Gemini · NVIDIA NIM · InsForge · OpenRouter · OpenAI SDK · Arize Phoenix — for the Google Cloud Rapid Agent Hackathon.</sub>
 </div>
