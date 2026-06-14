@@ -75,7 +75,8 @@ export async function POST(request: NextRequest) {
       const readable = new ReadableStream({
         async start(controller) {
           try {
-            for await (const chunk of completion) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            for await (const chunk of (completion as any)) {
               const text = chunk.choices[0]?.delta?.content;
               if (text) {
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`));

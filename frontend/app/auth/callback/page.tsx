@@ -40,23 +40,39 @@ function CallbackContent() {
       return
     }
 
-    const verifier = sessionStorage.getItem("pkce_verifier") || undefined
     const redirectTo = sessionStorage.getItem("oauth_redirect") || "/generate"
 
-    insforge.auth.exchangeOAuthCode(code, verifier)
-      .then(result => {
-        const user = result?.data?.user
-        const token = result?.data?.accessToken
-        if (!user) throw new Error("Exchange returned no user")
-        saveUserLocally(user, token)
-        sessionStorage.removeItem("pkce_verifier")
-        sessionStorage.removeItem("oauth_redirect")
-        router.replace(redirectTo)
-      })
-      .catch((e: unknown) => {
-        setErrorMsg((e as { message?: string })?.message || "OAuth sign-in failed")
-        setStatus("error")
-      })
+    // The @insforge/sdk automatically detects `insforge_code`, exchanges it,
+    // saves the session, and cleans the URL. We just wait for the URL to be clean.
+    const interval = setInterval(() => {
+      if (!window.location.search.includes("insforge_code")) {
+        clearInterval(interval)
+        insforge.auth.getCurrentUser()
+          .then(result => {
+            const user = result?.data?.user
+            if (!user) throw new Error("Automatic exchange completed but no user found.")
+            saveUserLocally(user, undefined)
+            sessionStorage.removeItem("oauth_redirect")
+            router.replace(redirectTo)
+          })
+          .catch((e: unknown) => {
+            setErrorMsg((e as { message?: string })?.message || "OAuth sign-in failed")
+            setStatus("error")
+          })
+      }
+    }, 200)
+
+    // Fallback timeout after 10s
+    const timeout = setTimeout(() => {
+      clearInterval(interval)
+      setErrorMsg("Sign-in timed out. Please try again.")
+      setStatus("error")
+    }, 10000)
+
+    return () => {
+      clearInterval(interval)
+      clearTimeout(timeout)
+    }
   }, [router, searchParams])
 
   if (status === "loading") {
