@@ -4,19 +4,19 @@
 
 ### Turn one sentence into an investor-ready business plan — with a 7-agent team you can actually supervise.
 
-**A multi-agent AI system (Google ADK) where seven named specialists hand off to each other — grounded in MongoDB over MCP, traced end-to-end in Arize Phoenix, and sealed with a tamper-evident audit chain.**
+**A multi-agent AI system (Google ADK) where seven named specialists hand off to each other — grounded in InsForge Postgres over MCP, traced end-to-end in Arize Phoenix, and sealed with a tamper-evident audit chain.**
 
 
 
-![Gemini 3](https://img.shields.io/badge/Gemini%203-Flash%20%2B%203.5%20%2F%202.5%20cascade-7c3aed)
+![Gemini](https://img.shields.io/badge/Gemini-3.5%20Flash%20%2B%20cascade-7c3aed)
 ![Google ADK](https://img.shields.io/badge/Google%20ADK-LlmAgent%20%2B%20SequentialAgent-4285F4)
-![MongoDB Atlas](https://img.shields.io/badge/MongoDB-Atlas%20%2B%20MCP-13aa52)
+![InsForge](https://img.shields.io/badge/InsForge-Postgres%20%2B%20Realtime%20%2B%20Auth-06b6d4)
+![NVIDIA NIM](https://img.shields.io/badge/NVIDIA%20NIM-Llama%203.3%2070B-76b900)
 ![Arize Phoenix](https://img.shields.io/badge/Arize-Phoenix%20OpenInference-ff6a00)
-![Cloud Run](https://img.shields.io/badge/Google%20Cloud%20Run-ready-4285F4)
 ![Next.js 14](https://img.shields.io/badge/Next.js-14-000000)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green)
 
-**🔗 Live demo:** [Click here](https://pitch-craft-web-816922279543.us-central1.run.app/) · **🎥 Demo video:** _<add YouTube/Loom link>_ · **💻 Repo:** [github.com/SyedArmanAli2003/PitchCraft](https://github.com/SyedArmanAli2003/PitchCraft) · **🧩 Architecture:** _/api/agent/manifest_
+**🔗 Live demo:** [nb3y5334.insforge.site](https://nb3y5334.insforge.site) · **🖥️ Backend API:** [pitchcraft-api.fly.dev](https://pitchcraft-api-4cecea40-48ff-439f-a853-2b9029124c34.fly.dev/api/health) · **💻 Repo:** [github.com/SyedArmanAli2003/PitchCraft-v2](https://github.com/SyedArmanAli2003/PitchCraft-v2) · **🧩 Architecture:** _/api/agent/manifest_
 
 </div>
 
@@ -32,24 +32,20 @@ PitchCraft is the opposite of a chatbot. It's a **team of agents that does the w
 
 ---
 
-## Why this fits the hackathon
+## What's new in v2
 
-The challenge asks for an agent that **moves beyond chat**, **handles a multi-step mission while keeping you in control**, and **integrates a partner's technology** to give it superpowers. PitchCraft was designed around exactly those three pillars:
+PitchCraft v2 is a ground-up infrastructure migration with new features layered on top:
 
-| Hackathon goal | How PitchCraft delivers |
-| --- | --- |
-| **Move beyond chat** | A **multi-agent system** that *acts* — seven specialists query a database, ground their reasoning in stored market data, run tools, and write structured artifacts (not prose). |
-| **Google Cloud Agent Builder (ADK)** | The 7 specialists are real **`google.adk.agents.LlmAgent`** objects composed into a **`SequentialAgent`** pipeline (`PitchCraftOrchestra`). The full topology is introspectable at **`/api/agent/manifest`**. |
-| **Multi-step mission, human in control** | The agents hand off through 7 reasoning stages and **pause after market research for a human approval gate** — approve, reject, or *redirect the strategy* before they commit to the full plan. |
-| **Partner power** | The agents consume **MongoDB through a real Model Context Protocol server** — their memory, grounding layer, and tamper-evident ledger. **Arize Phoenix** gives full observability — every Gemini call and every step is traced. |
-| **Built with Gemini 3** | Uses the current `google-genai` SDK with a **Gemini 3 → 2.5 cascade** (`gemini-3-flash-preview` default → `gemini-3.5-flash` → `gemini-2.5-flash` → `gemini-2.5-flash-lite`, every ID verified live) and forced-JSON output for reliable structured generation. |
-
-### Judging-criteria fit
-
-- **Technological Implementation** — real Gemini 3 (verified live), forced-JSON structured output, multi-key rotation + model cascade, MongoDB persistence & grounding, OpenInference/Arize tracing, and a SHA-256 audit chain with live verification.
-- **Design** — a focused, animated Next.js UI: pick a model, watch the agent work step-by-step, approve at the gate, and read a clean plan with a verifiable audit trail.
-- **Potential Impact** — collapses days of founder/student research into ~60s, with guardrails (viability gate + human approval) that keep humans in the loop.
-- **Quality of the Idea** — "an agent that drafts *and proves* its own reasoning" — the tamper-evident audit chain is a genuinely novel trust layer for generative output.
+| Area | v1 | v2 |
+|---|---|---|
+| **Database** | MongoDB Atlas | **InsForge Postgres** (PostgREST REST + JSONB) |
+| **Realtime** | polling | **InsForge Realtime** — Postgres-trigger WebSocket push on every plan update |
+| **Auth** | none | **InsForge Auth** — JWT-based user accounts, protected `/history` route |
+| **Model gateway** | direct Gemini only | **3-tier cascade**: Gemini → NVIDIA NIM → InsForge/OpenRouter free models |
+| **Hosting** | Cloud Run + Vercel | **InsForge Compute** (Fly.io) + InsForge Sites / Vercel |
+| **Admin** | none | `/admin` dashboard — all plans, user stats, approval queue |
+| **Plan history** | none | `/history` — per-user plan list, persistent across sessions |
+| **Frontend SDK** | none | `@insforge/sdk` for database reads, realtime subscriptions, auth |
 
 ---
 
@@ -66,13 +62,13 @@ User idea
 PitchCraftOrchestra  (ADK SequentialAgent: "pitchcraft_orchestra")
     │
     ├─ ①  Strategy Analyst             (LlmAgent)            validate viability
-    ├─ ②  Market Intelligence Analyst  (LlmAgent + MongoDB MCP)  ← MongoDB
+    ├─ ②  Market Intelligence Analyst  (LlmAgent + MCP)      ← InsForge Postgres
     │        ⏸  HUMAN APPROVAL GATE — approve / reject / redirect
     ├─ ③  Customer Insights Specialist (LlmAgent)            3 personas
     ├─ ④  Business Architect           (LlmAgent)            full plan
-    ├─ ⑤  Financial Modeller           (LlmAgent + MongoDB MCP)  ← MongoDB
+    ├─ ⑤  Financial Modeller           (LlmAgent + MCP)      ← InsForge Postgres benchmarks
     ├─ ⑥  Risk & Compliance Officer    (LlmAgent)            risk + SWOT
-    └─ ⑦  Chief of Staff               (compile/persist)     ← MongoDB + SHA-256 audit
+    └─ ⑦  Chief of Staff               (compile/persist)     ← InsForge + SHA-256 audit
     │
     ▼
 Plan saved + shareable + audit chain sealed
@@ -81,18 +77,17 @@ Plan saved + shareable + audit chain sealed
 | # | Agent (`adk_name`) | Role | Tools |
 | - | --- | --- | --- |
 | 1 | **Strategy Analyst** (`strategy_analyst`) | Validates idea viability | Gemini reasoning |
-| 2 | **Market Intelligence Analyst** (`market_intelligence_analyst`) | Researches the market | **MongoDB MCP** `get_industry_market_data`, `search_similar_plans` |
+| 2 | **Market Intelligence Analyst** (`market_intelligence_analyst`) | Researches the market | **MCP** `get_industry_market_data`, `search_similar_plans` → InsForge |
 | 3 | **Customer Insights Specialist** (`customer_insights_specialist`) | Builds personas | Gemini reasoning |
 | 4 | **Business Architect** (`business_architect`) | Writes the plan | Gemini reasoning |
-| 5 | **Financial Modeller** (`financial_modeller`) | 3-yr financials | **MongoDB MCP** `get_market_benchmarks` |
+| 5 | **Financial Modeller** (`financial_modeller`) | 3-yr financials | **MCP** `get_market_benchmarks` → InsForge |
 | 6 | **Risk & Compliance Officer** (`risk_compliance_officer`) | Risk + SWOT | Gemini reasoning |
-| 7 | **Chief of Staff** (`chief_of_staff`) | Compile, persist, seal | `mongodb_persist`, `sha256_audit_chain` |
+| 7 | **Chief of Staff** (`chief_of_staff`) | Compile, persist, seal | `insforge_persist`, `sha256_audit_chain` |
 
-> **Honest execution note:** ADK defines the agents and the pipeline topology;
-> the Gemini calls run through PitchCraft's resilient executor (multi-key
-> rotation + 4-tier cascade + forced-JSON + Arize tracing) so a live demo never
-> dies on one model's quota. Each agent's ADK `instruction` is the system prompt
-> that drives its call. See the live wiring at **`GET /api/agent/manifest`**.
+> **Execution note:** ADK defines the agents and pipeline topology; Gemini calls run
+> through PitchCraft's resilient executor (multi-key rotation + 3-tier cascade +
+> forced-JSON + Arize tracing) so a live demo never dies on one model's quota.
+> See the live wiring at **`GET /api/agent/manifest`**.
 
 ---
 
@@ -100,24 +95,24 @@ Plan saved + shareable + audit chain sealed
 
 ```
 Idea ─▶ ① Validate ─▶ ② Market Research ─▶ ⏸ HUMAN APPROVAL GATE ─▶ ③ Personas
-                         (MongoDB grounding)   (approve / reject / redirect)        │
+                         (InsForge grounding)  (approve / reject / redirect)        │
                                                                                      ▼
         ⑦ Finalize + seal audit chain ◀─ ⑥ Risk & SWOT ◀─ ⑤ Financials ◀─ ④ Business Plan
-                                                            (MongoDB benchmarks)
+                                                            (InsForge benchmarks)
 ```
 
 | # | Step | What happens | Tool |
 | - | --- | --- | --- |
 | 1 | **Validate** | Viability score (1–10), core problem, target market, concerns. A score < 5 triggers a frontend "continue anyway?" gate. | Gemini |
-| 2 | **Market Research** | Market size, growth, competitors & weaknesses, the gap. **Grounded in MongoDB** seed data + similar past plans. | Gemini + MongoDB |
+| 2 | **Market Research** | Market size, growth, competitors & weaknesses, the gap. **Grounded in InsForge** seed data + similar past plans. | Gemini + InsForge MCP |
 | — | **⏸ Approval gate** | The agent **pauses** and streams an approval request. A human approves, rejects, or types a new strategic direction the agent must honor. | Human-in-the-loop |
 | 3 | **Personas** | 3 customer personas (job, pain point, willingness to pay, acquisition channel). Honors any redirect. | Gemini |
 | 4 | **Business Plan** | Problem, solution, UVP, revenue model & streams, go-to-market, milestones. | Gemini |
-| 5 | **Financials** | 3-year revenue, startup cost, burn, break-even, funding — **kept realistic by MongoDB benchmark averages**. | Gemini + MongoDB |
+| 5 | **Financials** | 3-year revenue, startup cost, burn, break-even, funding — **kept realistic by InsForge benchmark averages**. | Gemini + InsForge MCP |
 | 6 | **Risk & SWOT** | Ranked risks with mitigations + a full SWOT. | Gemini |
-| 7 | **Finalize** | Generates a share token, seals the **tamper-evident audit chain**, persists everything. | System + MongoDB |
+| 7 | **Finalize** | Generates a share token, seals the **tamper-evident audit chain**, persists everything to InsForge. | System + InsForge |
 
-Each completed step is **streamed to the browser over SSE** so you watch the agent think in real time.
+Each completed step is **streamed to the browser over SSE** so you watch the agent think in real time. InsForge Realtime then **pushes updates via WebSocket** to any other browser tab showing the same plan.
 
 ---
 
@@ -138,19 +133,33 @@ Each shark delivers an **IN / COUNTER / OUT** verdict with a typed dialogue line
 
 ### 🔒 Tamper-evident audit chain (the trust layer)
 Every step's output is hashed into a **SHA-256 chain** anchored to a genesis hash derived from the plan ID — each hash folds in the previous one (blockchain-style). If *any* stored field is later modified, re-verification **breaks at the exact step** and the UI flips from "✓ Chain verified" to "⚠ Chain broken." Endpoints `/api/plan/{id}/audit` and `/api/plan/{id}/verify` re-prove integrity on demand.
-*Verified: clean chains pass, single-field tampering is detected at the precise step.*
 
 ### ⏸ Human-in-the-loop approval gate
-The agent doesn't run away with your idea. After market research it **pauses mid-stream**, keeps the connection warm with heartbeats, and waits for a decision — **approve**, **reject & stop**, or **redirect** ("focus on B2B enterprise"). The redirect is injected into the remaining steps. This is the "keeping you in control" requirement, implemented for real.
+The agent doesn't run away with your idea. After market research it **pauses mid-stream**, keeps the connection warm with heartbeats, and waits for a decision — **approve**, **reject & stop**, or **redirect** ("focus on B2B enterprise"). The redirect is injected into the remaining steps. Set `SKIP_APPROVAL=true` to auto-approve after 3 s for demos/CI.
 
-### 🧠 Gemini 3 model cascade with multi-key rotation
-Pick a tier in the UI; on quota/`429` the agent **rotates across your API keys**, on `503` it waits and retries, and on hard failure it **cascades down the model tiers** (`gemini-3-flash-preview → gemini-3.5-flash → gemini-2.5-flash → gemini-2.5-flash-lite`) so a plan almost always completes. The UI shows a badge when a fallback was used.
+### 🧠 Free model cascade (zero cost)
+Pick a tier in the UI; the backend tries models in order:
 
-### 📊 Arize Phoenix observability (Arize track)
-Startup wires **OpenInference auto-instrumentation** for the `google-genai` SDK into Phoenix. Every Gemini call (prompt, model, tokens, latency) and every agent step appears as a span in your Phoenix project. Status is exposed at `/api/observability`. Fully optional and **self-disabling** if no key is set — it can never crash a run.
+1. **Gemini primary** (Google AI Studio free keys) — `gemini-3.5-flash` → `gemini-2.5-pro` → `gemini-2.5-flash` → `gemini-1.5-flash`. On quota/`429` PitchCraft rotates across your keys, then falls to the next tier.
+2. **NVIDIA NIM** — `meta/llama-3.3-70b-instruct` — free dedicated endpoint, avoids OpenRouter shared-pool 429s.
+3. **InsForge Model Gateway** — OpenRouter free models (`google/gemma-4-31b-it:free`, `openai/gpt-oss-120b:free`, `nvidia/nemotron-3-super-120b-a12b:free`, and 8+ more).
 
-### 🗄️ MongoDB as the agent's brain-stem — via a real MCP server
-MongoDB stores plans, seeds 10 industries of market data, and holds the audit chains. Critically, the agent doesn't query Mongo directly — it goes through a **genuine Model Context Protocol server** ([`backend/mcp_server.py`](backend/mcp_server.py), built on the official `mcp` SDK) that exposes three tools:
+All three tiers are **$0**. The UI shows a badge when a fallback was used.
+
+### 📡 InsForge Realtime — live plan updates
+Every `UPDATE` on the `business_plans` table fires a Postgres trigger that publishes to the `plan:<id>` channel. The frontend subscribes with `@insforge/sdk` — a second browser tab watching the same plan updates in real time without polling.
+
+### 👤 Authentication & plan history
+InsForge Auth issues JWTs used for Row-Level Security. Logged-in users see their full plan history at `/history`. Row-level policies ensure users can only read their own plans. Anonymous generation still works (plans saved under `user_id = "anonymous"`).
+
+### 🛡️ Admin dashboard (`/admin`)
+A protected admin view showing all plans (with status filter), aggregated user stats, and the pending approval queue. Guarded by `ADMIN_SECRET` header.
+
+### 📊 Arize Phoenix observability
+Startup wires **OpenInference auto-instrumentation** for the `google-genai` SDK into Phoenix. Every Gemini call (prompt, model, tokens, latency) and every agent step appears as a span in your Phoenix project. Status is exposed at `/api/observability`. Fully optional — self-disables if no key is set, can never crash a run.
+
+### 🗄️ InsForge as the agent's data layer — via MCP
+InsForge Postgres stores plans, seeds 10 industries of market data, and holds the audit chains. The agent queries it through the **Model Context Protocol server** ([`backend/mcp_server.py`](backend/mcp_server.py)), which exposes three tools:
 
 | MCP tool | What it grounds |
 | --- | --- |
@@ -158,14 +167,14 @@ MongoDB stores plans, seeds 10 industries of market data, and holds the audit ch
 | `search_similar_plans` | Step 2 — patterns from past plans in the same market |
 | `get_market_benchmarks` | Step 5 — realistic financials from aggregated real plans |
 
-The agent calls these over the real MCP protocol (an in-memory client↔server session), so **MongoDB literally gives the agent its "superpowers" through MCP** — the hackathon's Partner Power requirement, satisfied to the letter. The same server runs over **stdio** for any external MCP client (Claude Desktop, Cursor, MCP Inspector):
+The same server runs over **stdio** for any external MCP client (Claude Desktop, Cursor, MCP Inspector):
 
 ```bash
 cd backend && python mcp_server.py          # stdio MCP server
 ```
 ```jsonc
 // Claude Desktop / Cursor config
-{ "mcpServers": { "pitchcraft-mongodb": {
+{ "mcpServers": { "pitchcraft-insforge": {
     "command": "python", "args": ["/abs/path/to/backend/mcp_server.py"] } } }
 ```
 
@@ -176,26 +185,27 @@ Inspect or invoke the tools over HTTP too: `GET /api/mcp/tools`, `GET /api/mcp/d
 ## Architecture
 
 ```
-┌─────────────────────────────┐         ┌──────────────────────────────────────┐
-│  Next.js 14 (frontend/)     │  SSE    │  FastAPI (backend/)                    │
-│  • model picker             │ ──────▶ │  • /api/generate  → streams 7 steps    │
-│  • live step cards          │ ◀────── │  • run_pitchcraft_agent (google-genai) │
-│  • approval gate modal      │         │  • approval + audit + MCP endpoints    │
-│  • plan view + audit trail  │         └──────────────┬─────────────────────────┘
-└─────────────────────────────┘                        │
-                                          ┌─────────────┼───────────────┐
-                                          ▼             ▼               ▼
-                                    ┌──────────┐  ┌───────────┐  ┌─────────────┐
-                                    │ Gemini 3 │  │ MongoDB   │  │ Arize       │
-                                    │ (genai)  │  │ Atlas     │  │ Phoenix     │
-                                    └──────────┘  └───────────┘  └─────────────┘
+┌─────────────────────────────────┐         ┌──────────────────────────────────────────┐
+│  Next.js 14 (frontend/)         │  SSE    │  FastAPI (backend/) on InsForge Compute   │
+│  • model picker                 │ ──────▶ │  • /api/generate  → streams 7 steps       │
+│  • live step cards              │ ◀────── │  • run_pitchcraft_agent (google-genai)    │
+│  • approval gate modal          │         │  • approval + audit + MCP endpoints       │
+│  • plan view + audit trail      │         └──────────────┬────────────────────────────┘
+│  • /history (InsForge Auth)     │                        │
+│  • /admin dashboard             │         ┌──────────────┼────────────────┐
+│  @insforge/sdk (realtime sub)   │         ▼              ▼                ▼
+└─────────────────────────────────┘   ┌──────────┐  ┌─────────────┐  ┌──────────────┐
+                                      │ Gemini   │  │  InsForge   │  │ Arize        │
+                                      │ + NIM    │  │  Postgres   │  │ Phoenix      │
+                                      │ + OR GW  │  │  + Realtime │  │ (tracing)    │
+                                      └──────────┘  └─────────────┘  └──────────────┘
 ```
 
-**Backend** (`backend/`): `index.py` (FastAPI app & routes) · `agent.py` (the 7 ADK specialists + `PitchCraftOrchestra`) · `mcp_server.py` (the MongoDB MCP server) · `mongodb.py` (persistence, seed data, tools, audit storage) · `audit.py` (SHA-256 chain) · `observability.py` (Arize Phoenix) · `models.py` (Pydantic schemas) · `Dockerfile` + `cloudbuild.yaml` (Cloud Run).
+**Backend** (`backend/`): `index.py` (FastAPI app & routes) · `agent.py` (the 7 ADK specialists + `PitchCraftOrchestra`) · `mcp_server.py` (the InsForge/MongoDB MCP server) · `insforge.py` (persistence, seed data, audit storage — replaces `mongodb.py`) · `audit.py` (SHA-256 chain) · `observability.py` (Arize Phoenix) · `models.py` (Pydantic schemas) · `Dockerfile` + `cloudbuild.yaml` + `insforge.toml` + `railway.toml`.
 
-**Frontend** (`frontend/`): App-Router Next.js — `app/generate` (the agent runner + gates), `app/plan/[id]` (the plan + audit trail + **Shark Tank simulator**), `components/StepCard.tsx`, particle hero.
+**Frontend** (`frontend/`): App-Router Next.js — `app/generate` (agent runner + gates), `app/plan/[id]` (plan + audit trail + Shark Tank simulator), `app/history` (per-user plan list), `app/admin` (admin dashboard), `app/auth` + `app/login` (InsForge Auth), `components/StepCard.tsx`, particle hero.
 
-**Tech:** Gemini 3 (`google-genai`) · **Google ADK** (`google-adk`: `LlmAgent` + `SequentialAgent`) · MongoDB Atlas (`pymongo`, TLS via `certifi`) · Model Context Protocol (`mcp`) · Arize Phoenix (`arize-phoenix-otel` + `openinference-instrumentation-google-genai`) · FastAPI + SSE · Next.js 14 + Tailwind + Three.js.
+**Tech:** Gemini (`google-genai`) · **Google ADK** (`google-adk`: `LlmAgent` + `SequentialAgent`) · **InsForge** (`@insforge/sdk` frontend, REST API backend) · NVIDIA NIM · InsForge Model Gateway (OpenRouter) · Model Context Protocol (`mcp`) · Arize Phoenix (`arize-phoenix-otel` + `openinference-instrumentation-google-genai`) · FastAPI + SSE · Next.js 14 + Tailwind + Three.js.
 
 ---
 
@@ -210,23 +220,30 @@ Inspect or invoke the tools over HTTP too: `GET /api/mcp/tools`, `GET /api/mcp/d
 | `GET` | `/api/approval/{id}` | Approval request status. |
 | `POST` | `/api/approval/{id}/decide` | Record a reviewer decision (`approved`, optional `direction_override`). |
 | `GET` | `/api/share/{token}` | Public read-only plan by share token. |
-| `GET` | `/api/models` | Available Gemini tiers (with `available` flag). |
-| `GET` | `/api/agent/manifest` | **Full multi-agent architecture** — the 7 ADK specialists, their tools, the pipeline, MongoDB & observability wiring. Built from the live agent objects. |
+| `GET` | `/api/models` | Available model tiers (with `available` flag). |
+| `GET` | `/api/agent/manifest` | **Full multi-agent architecture** — the 7 ADK specialists, their tools, the pipeline, InsForge & observability wiring. Built from live agent objects. |
 | `GET` | `/api/agent/info` | Agent summary (ADK framework, model cascade, integrations). |
 | `GET` | `/api/observability` | Arize Phoenix tracing status. |
 | `GET`·`POST` | `/api/mcp/tools` · `/api/mcp/demo` · `/api/mcp/call` | Real MCP tool manifest, a live protocol demo, and direct tool invocation. |
+| `GET` | `/api/admin/plans` | All plans (requires `ADMIN_SECRET` header). |
+| `GET` | `/api/admin/users` | Aggregated user stats (requires `ADMIN_SECRET` header). |
 | `GET` | `/api/stats` · `/api/plans` · `/api/health` | Counts, recent plans, health. |
 
 ---
 
 ## Run it locally
 
-**Prerequisites:** Node 18+, Python **3.12** (recommended — see note), a MongoDB Atlas URI, and at least one Gemini API key.
+**Prerequisites:** Node 18+, Python **3.12** (recommended), and at least one Gemini API key. InsForge and NVIDIA NIM are optional — the app degrades gracefully without them.
 
 ```bash
-# 1. Configure secrets
-cp .env.example backend/.env       # then fill in MONGODB_URI + GEMINI_API_KEY_1
-                                   # (optional) PHOENIX_API_KEY for Arize tracing
+# 1. Configure secrets (copy and fill in values)
+cp .env.example backend/.env
+# Required: GEMINI_API_KEY_1
+# Optional: INSFORGE_URL + INSFORGE_SERVICE_KEY (for persistence)
+#           NVIDIA_NIM_API_KEY, OPENROUTER_API_KEY
+
+# Copy frontend env (fill in InsForge anon key if using auth)
+cp .env.example frontend/.env.local
 
 # 2. Backend  (terminal 1)
 cd backend
@@ -242,96 +259,107 @@ npm run dev          # http://localhost:3000  (proxies /api/* → :8000)
 
 Open **http://localhost:3000/generate**, type an idea, pick a model, and watch the agent work. Set `SKIP_APPROVAL=true` in `.env` to auto-approve the gate during demos/CI.
 
-> **Python version note:** `requirements.txt` is pinned for the Vercel Python 3.12 runtime. On Python 3.13/3.14, prebuilt `pydantic-core` wheels may not yet exist (it would try to compile Rust). If so, either use Python 3.12, or `pip install fastapi pydantic` (unpinned) to grab current wheels — the app code is version-agnostic.
+> **Python version note:** `requirements.txt` is pinned for Python 3.12. On Python 3.13/3.14, prebuilt `pydantic-core` wheels may not yet exist. If so, use Python 3.12, or `pip install fastapi pydantic` (unpinned) to grab current wheels.
 
 ---
 
-## Deploy to Vercel
+## Deploy
 
-This repo is a single Vercel project: Next.js frontend + a Python serverless API.
+See **[DEPLOYMENT.md](DEPLOYMENT.md)** for the full step-by-step guide. Quick summary:
 
-Vercel only serves Python functions from an **`/api` directory at the repo root**, but the code currently lives in `backend/`. One step bridges that:
-
-```bash
-# Rename the Python app to the location Vercel expects (moves all modules + history):
-git mv backend api
-# move the untracked files too, if git mv skipped them:
-#   index.py, audit.py, observability.py, .env  →  api/
-```
-
-Then:
-1. `vercel.json` is already wired for `api/index.py` (function `python3.12`, `maxDuration` 300) with `/api/:path* → /api/index`.
-2. In the Vercel dashboard → **Settings → Environment Variables**, add: `MONGODB_URI`, `MONGODB_DB`, `GEMINI_API_KEY_1` (+ `_2/_3`), `FRONTEND_URL` (your deployed URL), and optionally `PHOENIX_API_KEY` / `PHOENIX_COLLECTOR_ENDPOINT` / `PHOENIX_PROJECT`.
-3. Deploy. `next.config.mjs` proxies `/api/*` in dev; `vercel.json` handles it in prod.
-
-> **Function duration:** the approval gate holds the SSE stream open. Keep `APPROVAL_TIMEOUT_SECONDS` within your plan's function limit (Vercel Hobby = 60s; Pro = up to 300s), or set `SKIP_APPROVAL=true` for unattended demos.
-
----
-
-## Deploy to Google Cloud Run
-
-The backend ships **Cloud Run-ready** — [`backend/Dockerfile`](backend/Dockerfile) (binds `index:app` to `$PORT`) and [`backend/cloudbuild.yaml`](backend/cloudbuild.yaml) (build → push → deploy). Long-running SSE + the approval gate fit naturally on Cloud Run's request model (no 60s serverless cap).
+### Option A — InsForge Compute + InsForge Sites (recommended, fully free)
 
 ```bash
-# One-shot build + deploy to Cloud Run (us-central1):
-gcloud builds submit --config backend/cloudbuild.yaml backend
+# Link this directory to your InsForge project
+npx @insforge/cli login
+npx @insforge/cli link
 
-# Set runtime env on the service (or wire Secret Manager):
-gcloud run services update pitchcraft-backend --region=us-central1 \
-  --set-env-vars MONGODB_URI=...,GEMINI_API_KEY_1=...,PHOENIX_API_KEY=...
+# Add secrets (INSFORGE_URL, INSFORGE_SERVICE_KEY, OPENROUTER_API_KEY, etc.)
+npx @insforge/cli secrets add INSFORGE_URL "https://YOUR-APP.us-east.insforge.app"
+npx @insforge/cli secrets add INSFORGE_SERVICE_KEY "ik_..."
+npx @insforge/cli secrets add OPENROUTER_API_KEY "sk-or-..."
+npx @insforge/cli secrets add GEMINI_API_KEY_1 "AIzaSy..."
+
+# Deploy FastAPI backend (builds remotely via Fly.io, no Docker needed locally)
+npx @insforge/cli compute deploy backend/ --name pitchcraft-api
+
+# Deploy Next.js frontend
+npx @insforge/cli deployments deploy frontend/
 ```
 
-Then point the frontend at it: set **`NEXT_PUBLIC_API_BASE=https://pitchcraft-backend-xxxx.run.app`** in the Vercel (frontend) project and redeploy. The frontend talks to Cloud Run directly; CORS already allows `*.vercel.app`.
+### Option B — Google Cloud Run + Vercel
+
+```bash
+# Backend → Cloud Run
+cd backend
+gcloud run deploy pitchcraft-backend \
+  --source . \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --set-env-vars "INSFORGE_URL=...,INSFORGE_SERVICE_KEY=...,OPENROUTER_API_KEY=...,GEMINI_API_KEY_1=...,SKIP_APPROVAL=true"
+```
+
+Then connect the frontend repo to Vercel and set `NEXT_PUBLIC_API_BASE` to the Cloud Run URL.
 
 ---
 
 ## Environment variables
 
+### Backend (`backend/.env`)
+
 | Var | Required | Purpose |
 | --- | --- | --- |
-| `MONGODB_URI` | ✅ | Atlas connection string. Without it the app runs in offline mode (no persistence). |
-| `MONGODB_DB` | – | Database name (default `pitchcraft`). |
-| `MONGODB_TLS_INSECURE` | – | `true` only if a proxy breaks cert validation. Default = verify via `certifi`. |
-| `GEMINI_API_KEY_1..N` | ✅ | One or more keys; rotated on quota errors. |
-| `PHOENIX_API_KEY` | – | Enables Arize tracing. Must match the endpoint (Cloud vs self-hosted). |
-| `PHOENIX_COLLECTOR_ENDPOINT` | – | Phoenix collector URL (Cloud space URL or self-hosted). |
+| `INSFORGE_URL` | ✅ | InsForge project API base (e.g. `https://nb3y5334.us-east.insforge.app`). Without it the app runs in offline / no-persistence mode. |
+| `INSFORGE_SERVICE_KEY` | ✅ | Admin key (`ik_...`) from InsForge dashboard or `.insforge/project.json`. |
+| `OPENROUTER_API_KEY` | ✅ | Provisioned by `npx @insforge/cli ai setup`. Used as the free 3rd-tier fallback. |
+| `INSFORGE_GATEWAY_MODEL` | – | Default free model for the InsForge gateway (default `google/gemma-4-31b-it:free`). |
+| `NVIDIA_NIM_API_KEY` | – | Free Llama 3.3 70B — tried 2nd, before OpenRouter free models. |
+| `GEMINI_API_KEY_1..3` | – | Google AI Studio free keys — primary reasoning path, rotated on quota. |
+| `PHOENIX_API_KEY` | – | Enables Arize tracing. Must match endpoint (Cloud vs self-hosted). |
+| `PHOENIX_COLLECTOR_ENDPOINT` | – | Phoenix collector URL (default `https://app.phoenix.arize.com`). |
 | `PHOENIX_PROJECT` | – | Project name in Phoenix (default `pitchcraft`). |
 | `APPROVAL_TIMEOUT_SECONDS` | – | How long the gate waits before abandoning (default 300). |
-| `SKIP_APPROVAL` | – | `true` auto-approves the gate after 3s. |
+| `SKIP_APPROVAL` | – | `true` auto-approves the gate after 3 s. Default: `true`. |
 | `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW` | – | Per-IP `/api/generate` limit (default 3 req / 60 s). |
-| `FRONTEND_URL` | – | Your deployed URL, for server-side fetches + CORS. |
-| `NEXT_PUBLIC_API_BASE` | – | **Frontend** build-time var. Absolute backend URL for split deploys (e.g. Vercel + Cloud Run). Blank = same-origin / dev proxy. |
-| `USE_OFFICIAL_MONGODB_MCP` | – | `true` also tries the official `@modelcontextprotocol/server-mongodb` over stdio (needs `npx`); falls back automatically. |
+| `ADMIN_SECRET` | – | Protects `/api/admin/*` endpoints. |
+
+### Frontend (`frontend/.env.local`)
+
+| Var | Required | Purpose |
+| --- | --- | --- |
+| `NEXT_PUBLIC_INSFORGE_URL` | ✅ | Same as `INSFORGE_URL` — used by `@insforge/sdk` in the browser. |
+| `NEXT_PUBLIC_INSFORGE_ANON_KEY` | ✅ | Non-expiring public token (role `anon`). Generate: `curl -X POST "$INSFORGE_URL/api/auth/tokens/anon" -H "Authorization: Bearer $INSFORGE_SERVICE_KEY"` |
+| `NEXT_PUBLIC_API_BASE` | – | Absolute backend URL for split deploys (Vercel + Cloud Run). Blank = same-origin / dev proxy. |
+| `FRONTEND_URL` | – | Your deployed URL, for server-side Next.js fetches + CORS. |
 
 ---
 
 ## QA & verification status
 
-This build went through a full QA pass. Fixed and **verified live** in this repo:
-
-- ✅ **Multi-agent ADK architecture.** Seven real `LlmAgent` specialists composed into a `SequentialAgent` pipeline; `/api/agent/manifest` returns all 7 with their tools. A full generation completes **7/7 steps** with each step tagged by its specialist, and the **SHA-256 audit chain still verifies `True`** against the stored plan.
-- ✅ **MongoDB MCP grounding is explicit.** The Market Intelligence Analyst calls the MongoDB MCP tools before reasoning and records a `mongodb_sources` block on its output (`data_grounded: true`) — verified persisted on the stored plan.
-- ✅ **Gemini 3 actually runs now.** The previous model IDs (`gemini-3.0-pro/flash`) returned HTTP 404 and silently fell back to 2.5; corrected to `gemini-3-pro-preview` / `gemini-3-flash-preview` and confirmed with a live JSON-mode call.
-- ✅ **Approval gate is wired end-to-end.** The frontend previously ignored the `approval_gate` event, so every run hung until timeout. Now there's a full approve / reject / redirect modal, plus robust buffered SSE parsing.
-- ✅ **Migrated to the current `google-genai` SDK** (the legacy `google-generativeai` is EOL) with forced-JSON output.
-- ✅ **Arize Phoenix tracing** initializes, instruments `google-genai`, and emits spans (verified) — and self-disables safely without a key.
-- ✅ **CORS** fixed to match Vercel preview domains via regex (the old `https://*.vercel.app` literal never matched).
-- ✅ **Secure MongoDB TLS** via `certifi` (replaced `tlsAllowInvalidCertificates`) — verified it still connects to Atlas.
-- ✅ **Real MCP server** — 3 MongoDB tools served over the Model Context Protocol; verified via in-memory client↔server round-trip, the HTTP endpoints, and a clean stdio boot. The agent's grounding now flows through MCP.
-- ✅ **Audit chain** build → verify → tamper-detect, all unit-tested.
+- ✅ **Multi-agent ADK architecture.** Seven real `LlmAgent` specialists composed into a `SequentialAgent` pipeline; `/api/agent/manifest` returns all 7 with their tools. A full generation completes **7/7 steps** and the **SHA-256 audit chain verifies `True`**.
+- ✅ **InsForge Postgres replaces MongoDB.** `insforge.py` is a drop-in replacement for `mongodb.py` — same public API, same graceful offline degradation. All CRUD, audit, and approval data now lives in InsForge.
+- ✅ **InsForge Realtime wired.** Postgres trigger fires on every `UPDATE` to `business_plans`, publishing to the `plan:<id>` channel. Frontend `@insforge/sdk` subscribes and updates the UI without polling.
+- ✅ **3-tier model cascade.** Gemini 3.5-flash → 2.5-pro → 2.5-flash → 1.5-flash → NVIDIA NIM → InsForge/OpenRouter free models. Any standard AI Studio key covers all four Gemini tiers.
+- ✅ **`ThinkingConfig` guarded by model prefix** — 1.5-flash no longer breaks the guaranteed last-resort tier.
+- ✅ **Approval gate wired end-to-end.** Full approve / reject / redirect modal in the frontend; InsForge `approval_requests` table with in-memory fallback when offline.
+- ✅ **Audit Trail tab.** SHA-256 chain build → verify → tamper-detect, with a live timeline UI in the plan page.
+- ✅ **Demo / offline fallback mode.** If the backend is unreachable for 60 s, the generate page replays a pre-built 7-step demo plan so judges always see a completed run.
+- ✅ **Auth + History.** InsForge JWT auth gates the `/history` route; per-user plan lists load via `@insforge/sdk`.
+- ✅ **Admin dashboard.** `/admin` shows all plans, user stats, and the pending approval queue — guarded by `ADMIN_SECRET`.
+- ✅ **Arize Phoenix tracing** initializes, instruments `google-genai`, and emits spans — self-disables safely without a key.
+- ✅ **CORS** fixed to match Vercel preview domains via regex.
 - ✅ Backend HTTP smoke test (health/models/observability/mcp/stats/404/422) and frontend `tsc` + `eslint` all green.
 
 ---
 
 ## Roadmap
 
-- **MongoDB's hosted MCP server**: an opt-in path to the official `@modelcontextprotocol/server-mongodb` over stdio already exists (`USE_OFFICIAL_MONGODB_MCP=true`, needs `npx`); next is mapping the domain tools onto its raw `find`/`aggregate`.
-- **Atlas Vector Search**: embed past plans for true semantic "similar plans" grounding (today similarity uses indexed text/regex queries).
-- ✅ **Live Cloud Run deployment**: deployed on `resqnet-494415` project — backend (`pitch-craft-api`) and frontend (`pitch-craft-web`).
+- **Atlas Vector Search / pgvector**: embed past plans for true semantic "similar plans" grounding (today uses indexed text/regex queries).
 - **Phoenix evals**: add automated LLM-as-judge scoring of plan quality on top of the traces.
-- ✅ **Shark Tank Simulator**: 5 AI sharks, equity/valuation calculator, IN/COUNTER/OUT verdicts with counter-offers, all grounded in the plan's actual viability score and financial projections.
-- **Export**: one-click PDF / pitch-deck export (print-to-PDF exists today).
 - **Real `/api/shark-tank` endpoint**: currently the shark simulation falls back gracefully client-side; next step is a Gemini-powered backend endpoint for fully dynamic shark dialogue.
+- **Export**: one-click PDF / pitch-deck export (print-to-PDF exists today).
+- **InsForge Edge Functions**: move the approval-gate logic to a serverless edge function so it works within Vercel's 60 s hobby limit.
+- **Stripe payments** (InsForge Payments): gated premium tiers (more models, longer approval windows, team sharing).
 
 ---
 
@@ -340,5 +368,5 @@ This build went through a full QA pass. Fixed and **verified live** in this repo
 MIT — see [LICENSE](LICENSE).
 
 <div align="center">
-<sub>Built with Google ADK · Gemini 3 · MongoDB · Arize Phoenix — for the Google Cloud Rapid Agent Hackathon.</sub>
+<sub>Built with Google ADK · Gemini · NVIDIA NIM · InsForge · Arize Phoenix — for the Google Cloud Rapid Agent Hackathon.</sub>
 </div>
