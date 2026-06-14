@@ -10,9 +10,14 @@ function apiBase(): string {
   const explicit = process.env.NEXT_PUBLIC_API_BASE
   if (explicit) return explicit.replace(/\/+$/, "")
 
-  if (typeof window === "undefined" && process.env.NODE_ENV === "production") {
+  // Hardcoded fallback so deployed frontend always points at the right backend
+  if (typeof window !== "undefined") {
+    return "https://pitchcraft-api-4cecea40-48ff-439f-a853-2b9029124c34.fly.dev"
+  }
+
+  if (process.env.NODE_ENV === "production") {
     const host = process.env.VERCEL_URL || process.env.FRONTEND_URL || ""
-    return host ? `https://${host}` : ""
+    return host ? `https://${host}` : "https://pitchcraft-api-4cecea40-48ff-439f-a853-2b9029124c34.fly.dev"
   }
   return ""
 }

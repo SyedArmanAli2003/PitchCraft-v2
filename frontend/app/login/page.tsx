@@ -43,25 +43,14 @@ function LoginContent() {
     } catch { /* SSR */ }
   }, [router, redirectTo, searchParams])
 
-  // ── Google OAuth (PKCE) ───────────────────────────────────────────────────
+  // ── Google OAuth ───────────────────────────────────────────────────
   const handleGoogle = async () => {
     if (!insforge) { setError("Auth client not initialised — check env vars."); return }
     setError(""); setInfo(""); setGoogleLoading(true)
     try {
-      const array = new Uint8Array(32)
-      crypto.getRandomValues(array)
-      const verifier = btoa(Array.from(array, b => String.fromCharCode(b)).join(""))
-        .replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "")
-      sessionStorage.setItem("pkce_verifier", verifier)
       sessionStorage.setItem("oauth_redirect", redirectTo)
-
-      const hashBuf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))
-      const challenge = btoa(Array.from(new Uint8Array(hashBuf), b => String.fromCharCode(b)).join(""))
-        .replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "")
-
       const { data, error: oauthErr } = await insforge.auth.signInWithOAuth("google", {
         redirectTo: OAUTH_CALLBACK,
-        additionalParams: { code_challenge: challenge, code_challenge_method: "S256" },
       })
       if (oauthErr) throw new Error(oauthErr.message)
       if (data?.url) {

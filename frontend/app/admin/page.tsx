@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import Navbar from "@/components/Navbar"
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || ""
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://pitchcraft-api-4cecea40-48ff-439f-a853-2b9029124c34.fly.dev"
 
 interface UserStat {
   user_id: string

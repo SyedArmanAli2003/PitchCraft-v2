@@ -408,7 +408,7 @@ function SharkTankTab({ plan }: { plan: BusinessPlan }) {
     }
     // Simulate each shark via the backend
     try {
-      const API_BASE = process.env.NEXT_PUBLIC_API_BASE || ""
+      const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://pitchcraft-api-4cecea40-48ff-439f-a853-2b9029124c34.fly.dev"
       const res = await fetch(`${API_BASE}/api/shark-tank`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

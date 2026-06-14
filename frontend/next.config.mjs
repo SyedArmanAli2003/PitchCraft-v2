@@ -2,12 +2,25 @@
 const config = {
   transpilePackages: ["three"],
 
-  // Self-contained server bundle for the Cloud Run Docker image (frontend/Dockerfile).
-  // Vercel ignores this and uses its own output.
+  // Bake the InsForge project constants into the bundle at build time.
+  // These override env vars — guaranteed to be present even when Vercel's build
+  // environment doesn't pass NEXT_PUBLIC_* vars through to the Next.js build.
+  env: {
+    NEXT_PUBLIC_INSFORGE_URL:
+      process.env.NEXT_PUBLIC_INSFORGE_URL ||
+      "https://nb3y5334.us-east.insforge.app",
+    NEXT_PUBLIC_INSFORGE_ANON_KEY:
+      process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY ||
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OC0xMjM0LTU2NzgtOTBhYi1jZGVmMTIzNDU2NzgiLCJlbWFpbCI6ImFub25AaW5zZm9yZ2UuY29tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNzY3OTd9.gZZV1BU70UgtUit3FnGXBNbVuvLIQNFZoVHlZ_iZT3g",
+    NEXT_PUBLIC_API_BASE:
+      process.env.NEXT_PUBLIC_API_BASE ||
+      "https://pitchcraft-api-4cecea40-48ff-439f-a853-2b9029124c34.fly.dev",
+  },
+
+  // Self-contained server bundle for Docker.
   output: "standalone",
 
-  // In development: proxy /api/* to FastAPI running on port 8000
-  // In production on Vercel: vercel.json rewrites handle /api/* → api/index.py
+  // Dev proxy: /api/* → FastAPI on port 8000
   async rewrites() {
     if (process.env.NODE_ENV === "development") {
       return [

@@ -1,19 +1,22 @@
-// InsForge browser client (TypeScript SDK).
-//
-// Used for the live plan page: it opens one Socket.IO connection and subscribes
-// to the `plan:<id>` channel. A Postgres trigger (migrations/002) calls
-// realtime.publish() on every plan UPDATE, so the page updates live on any
-// device — no SSE connection of its own required.
-//
-// The anon key is a stable, non-expiring public token (role "anon"); it's safe
-// to expose in the browser. If env vars are missing (e.g. during a build with
-// no InsForge configured), `insforge` is null and all realtime code no-ops.
+/**
+ * InsForge browser client.
+ *
+ * NEXT_PUBLIC_* env vars must be present at Next.js build time to be inlined
+ * into the JS bundle. We fall back to hardcoded project constants so the client
+ * always initialises even when env vars are missing from the build environment.
+ */
 import { createClient } from "@insforge/sdk"
 
-const baseUrl = process.env.NEXT_PUBLIC_INSFORGE_URL
-const anonKey = process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY
+// Hardcoded project values (safe to expose — these are public endpoints/keys)
+const INSFORGE_URL_DEFAULT  = "https://nb3y5334.us-east.insforge.app"
+const INSFORGE_ANON_DEFAULT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OC0xMjM0LTU2NzgtOTBhYi1jZGVmMTIzNDU2NzgiLCJlbWFpbCI6ImFub25AaW5zZm9yZ2UuY29tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNzY3OTd9.gZZV1BU70UgtUit3FnGXBNbVuvLIQNFZoVHlZ_iZT3g"
 
-export const insforge =
-  baseUrl
-    ? createClient({ baseUrl, anonKey: anonKey ?? undefined })
-    : null
+const baseUrl = process.env.NEXT_PUBLIC_INSFORGE_URL || INSFORGE_URL_DEFAULT
+const anonKey = process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY || INSFORGE_ANON_DEFAULT
+
+export const insforge = createClient({ baseUrl, anonKey })
+
+// Convenience: backend API base (for Shark Tank and other direct API calls)
+export const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE ||
+  "https://pitchcraft-api-4cecea40-48ff-439f-a853-2b9029124c34.fly.dev"
