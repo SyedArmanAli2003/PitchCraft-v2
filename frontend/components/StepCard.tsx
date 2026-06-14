@@ -32,6 +32,7 @@ const TOOL_BADGE: Record<ToolKey, { label: string; bg: string; color: string; bo
   insforge:                 { label: "INSFORGE",   bg: "rgba(16,185,129,0.14)", color: "rgb(52,211,153)",    border: "rgba(16,185,129,0.3)"  },
   "insforge-gateway":       { label: "INSFORGE AI", bg: "rgba(99,102,241,0.14)", color: "hsl(239,84%,80%)", border: "rgba(99,102,241,0.35)" },
   "nvidia-llama":           { label: "NVIDIA NIM",  bg: "rgba(34,197,94,0.14)", color: "rgb(74,222,128)",   border: "rgba(34,197,94,0.3)"  },
+  "nvidia-nemotron":        { label: "NVIDIA NEMOTRON", bg: "rgba(34,197,94,0.16)", color: "rgb(134,239,172)", border: "rgba(34,197,94,0.4)" },
   system:                   { label: "SYSTEM",     bg: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "rgba(255,255,255,0.12)" },
 }
 

@@ -33,7 +33,7 @@ export interface AgentStep {
   data?: Record<string, unknown>
   startedAt?: number
   completedAt?: number
-  tool: GeminiTool | "insforge" | "insforge-gateway" | "nvidia-llama" | "system"
+  tool: GeminiTool | "insforge" | "insforge-gateway" | "nvidia-llama" | "nvidia-nemotron" | "system"
 }
 
 export interface BusinessPlan {

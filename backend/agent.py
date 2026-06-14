@@ -84,14 +84,19 @@ _INSFORGE_GATEWAY_BASE = os.getenv("INSFORGE_GATEWAY_BASE", "https://openrouter.
 # ---------------------------------------------------------------------------
 _NVIDIA_NIM_BASE = "https://integrate.api.nvidia.com/v1"
 _NVIDIA_NIM_MODEL = "meta/llama-3.3-70b-instruct"
+# NVIDIA Nemotron 3 Super 120B — a 120B MoE reasoning model on the same NVIDIA
+# endpoint. Replaces the old Gemini 2.5 Pro "premium reasoning" slot. (DeepSeek
+# V4 Flash was evaluated but is not reliably servable on the free endpoint — it
+# times out — so we use Nemotron, which responds in ~2s with clean JSON.)
+_NEMOTRON_MODEL = "nvidia/nemotron-3-super-120b-a12b"
 
 
 def _nvidia_nim_key() -> str:
     return (os.getenv("NVIDIA_NIM_API_KEY") or "").strip()
 
 
-def _nvidia_nim_client():
-    """OpenAI-compatible client for NVIDIA NIM free endpoint."""
+def _nvidia_nim_client(timeout: float = 30.0):
+    """OpenAI-compatible client for the NVIDIA integrate endpoint (NIM + Nemotron)."""
     if not _OPENAI_SDK_AVAILABLE:
         return None
     key = _nvidia_nim_key()
@@ -99,7 +104,7 @@ def _nvidia_nim_client():
         return None
     try:
         return _OpenAICompat(base_url=_NVIDIA_NIM_BASE, api_key=key,
-                             max_retries=0, timeout=30.0)
+                             max_retries=0, timeout=timeout)
     except Exception:
         return None
 
@@ -199,14 +204,6 @@ MODEL_CONFIGS: dict[str, dict] = {
         "description": "Deep reasoning — may time out under high load",
         "quota_status": "limited",
     },
-    "gemini-2.5-pro": {
-        "display": "Gemini 2.5 Pro",
-        "tier": 5,
-        "model_id": "gemini-2.5-pro",
-        "badge": "Pro",
-        "description": "Most powerful — requires billing account (paid tier)",
-        "quota_status": "pro_only",
-    },
 }
 
 # Best default: gemini-3.5-flash confirmed working
@@ -219,7 +216,6 @@ CASCADE_ORDER = [
     "gemini-3.1-flash-lite",
     "gemini-2.5-flash-lite",
     "gemini-2.5-flash",
-    "gemini-2.5-pro",
 ]
 
 
@@ -400,6 +396,30 @@ def _call_nvidia_json(prompt: str) -> dict:
     return result
 
 
+def _call_nemotron_json(prompt: str) -> dict:
+    """NVIDIA Nemotron 3 Super 120B on the NVIDIA endpoint — a 120B MoE reasoning
+    model. This is the "premium reasoning" slot (replacing Gemini 2.5 Pro). It
+    responds in ~2s with clean JSON, so a normal (non-reasoning) chat call with a
+    modest timeout is enough."""
+    client = _nvidia_nim_client(timeout=60.0)
+    if not client:
+        raise RuntimeError("Nemotron not configured (NVIDIA_NIM_API_KEY missing)")
+    resp = client.chat.completions.create(
+        model=_NEMOTRON_MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.6,
+        top_p=0.95,
+        max_tokens=4096,
+    )
+    msg = resp.choices[0].message if resp.choices else None
+    text = getattr(msg, "content", None) if msg else None
+    result = _parse_valid_json(text)
+    if result is None:
+        raise RuntimeError(f"Nemotron returned non-JSON: {(text or '')[:200]}")
+    print(f"✅ Nemotron answered via {_NEMOTRON_MODEL}")
+    return result
+
+
 def _call_openrouter_json(prompt: str) -> dict:
     """OpenRouter free models only. Tries with response_format first; if the
     model rejects it (400), retries without it on the same model before moving on."""
@@ -465,20 +485,46 @@ async def _generate(prompt: str, model_key: str, keys: list[str]) -> tuple[dict,
     """
     last_err: Exception | None = None
 
+    # ── NVIDIA Nemotron 3 Super 120B (reasoning model) — direct, no Gemini ───
+    if model_key in ("nvidia-nemotron", "deepseek-v4"):
+        try:
+            result = await asyncio.to_thread(_call_nemotron_json, prompt)
+            return result, "nvidia-nemotron"
+        except Exception as e:
+            print(f"⚠️  Nemotron failed ({type(e).__name__}); falling back to NVIDIA NIM")
+            try:
+                result = await asyncio.to_thread(_call_nvidia_json, prompt)
+                return result, "nvidia-llama"
+            except Exception as e2:
+                raise RuntimeError(f"Nemotron and NVIDIA NIM both failed: {e2}") from e2
+
     # ── Direct-to-gateway paths (skip Gemini entirely) ──────────────────────
     if model_key == "nvidia-llama":
+        # Try NVIDIA NIM first; if it fails, fall back to OpenRouter free models
+        # (still a non-Gemini path, honouring the user's "free model" choice).
         try:
             result = await asyncio.to_thread(_call_nvidia_json, prompt)
             return result, "nvidia-llama"
         except Exception as e:
-            raise RuntimeError(f"NVIDIA NIM failed: {e}") from e
+            print(f"⚠️  NVIDIA NIM failed ({type(e).__name__}); falling back to OpenRouter")
+            try:
+                result = await asyncio.to_thread(_call_openrouter_json, prompt)
+                return result, "insforge-gateway"
+            except Exception as e2:
+                raise RuntimeError(f"NVIDIA NIM and OpenRouter both failed: {e2}") from e2
 
     if model_key == "insforge-gateway":
+        # Try OpenRouter free models first; if all fail, try NVIDIA NIM.
         try:
             result = await asyncio.to_thread(_call_openrouter_json, prompt)
             return result, "insforge-gateway"
         except Exception as e:
-            raise RuntimeError(f"InsForge gateway failed: {e}") from e
+            print(f"⚠️  OpenRouter failed ({type(e).__name__}); falling back to NVIDIA NIM")
+            try:
+                result = await asyncio.to_thread(_call_nvidia_json, prompt)
+                return result, "nvidia-llama"
+            except Exception as e2:
+                raise RuntimeError(f"InsForge gateway and NVIDIA NIM both failed: {e2}") from e2
 
     # ── Gemini cascade ──────────────────────────────────────────────────────
     start = CASCADE_ORDER.index(model_key) if model_key in CASCADE_ORDER else 0

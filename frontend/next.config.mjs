@@ -17,8 +17,10 @@ const config = {
       "https://pitchcraft-api-4cecea40-48ff-439f-a853-2b9029124c34.fly.dev",
   },
 
-  // Self-contained server bundle for Docker.
-  output: "standalone",
+  // Self-contained server bundle — only for Docker/Fly.io (set BUILD_STANDALONE=true).
+  // On Vercel we must NOT use standalone: its file-tracing step OOMs the builder
+  // (causes BUILD_UTILS_SPAWN_1) and Vercel produces its own optimized output.
+  ...(process.env.BUILD_STANDALONE === "true" ? { output: "standalone" } : {}),
 
   typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },

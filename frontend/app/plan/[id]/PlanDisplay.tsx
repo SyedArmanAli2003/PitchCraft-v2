@@ -382,6 +382,7 @@ function SharkTankTab({ plan }: { plan: BusinessPlan }) {
   const [reactions, setReactions] = useState<Reaction[]>([])
   const [loading, setLoading] = useState(false)
   const [pitched, setPitched] = useState(false)
+  const [sharkError, setSharkError] = useState("")
 
   const impliedValuation = askAmount && equityPct
     ? `$${(parseFloat(askAmount) / (parseFloat(equityPct) / 100) / 1_000_000).toFixed(2)}M`
@@ -391,7 +392,8 @@ function SharkTankTab({ plan }: { plan: BusinessPlan }) {
     if (!v || !b) return
     setLoading(true)
     setPitched(false)
-    // Build context for each shark
+    setSharkError("")
+    // Build the real pitch context for the AI sharks
     const ctx = {
       idea: plan.idea,
       viability_score: v.viability_score,
@@ -406,7 +408,7 @@ function SharkTankTab({ plan }: { plan: BusinessPlan }) {
       funding_needed: `$${Number(askAmount).toLocaleString()} for ${equityPct}% equity`,
       implied_valuation: impliedValuation,
     }
-    // Simulate each shark via the backend
+    // Real AI reactions only — no fabricated fallback.
     try {
       const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://pitchcraft-api-4cecea40-48ff-439f-a853-2b9029124c34.fly.dev"
       const res = await fetch(`${API_BASE}/api/shark-tank`, {
@@ -416,59 +418,20 @@ function SharkTankTab({ plan }: { plan: BusinessPlan }) {
       })
       if (res.ok) {
         const data = await res.json()
-        setReactions(data.reactions || [])
+        const list = (data.reactions || []) as Reaction[]
+        if (!list.length) throw new Error("No reactions returned")
+        setReactions(list)
+        setPitched(true)
       } else {
-        // Client-side fallback simulation
-        setReactions(simulateLocally(ctx))
+        const err = await res.json().catch(() => ({}))
+        setSharkError(err.detail || "The AI sharks are busy right now — please pitch again in a moment.")
       }
     } catch {
-      setReactions(simulateLocally(ctx))
+      setSharkError("Couldn't reach the AI sharks. Check your connection and pitch again.")
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
-    setPitched(true)
   }
-
-  function simulateLocally(ctx: Record<string, unknown>): Reaction[] {
-    const score = Number(ctx.viability_score ?? 6)
-    const valM = parseFloat(impliedValuation.replace(/[$M]/g, "")) || 2.5
-    return SHARKS.map(shark => {
-      let verdict: "IN" | "OUT" | "COUNTER" = "OUT"
-      let comment = ""
-      let counter_offer: string | undefined
-      if (shark.style === "tough") {
-        verdict = score >= 7 ? "COUNTER" : "OUT"
-        comment = score >= 7
-          ? `The viability score of ${score}/10 is acceptable, but I need traction data before I commit. $${Number(askAmount).toLocaleString()} at ${impliedValuation} is aggressive.`
-          : `A score of ${score}/10 tells me this isn\'t ready. Come back when you have revenue. I\'m out.`
-        if (verdict === "COUNTER") counter_offer = `I\'ll do the deal at ${Math.round(parseFloat(equityPct) * 1.5)}% equity — take it or leave it.`
-      } else if (shark.style === "tech-focused") {
-        verdict = score >= 6 ? "IN" : "COUNTER"
-        comment = score >= 6
-          ? `The AI angle is compelling. ${impliedValuation} valuation for this stage is fair if you hit ${String(ctx.year1_revenue ?? "Year 1 targets")}.`
-          : `I like the tech but the valuation scares me. Let\'s talk about a note structure instead.`
-        if (verdict === "COUNTER") counter_offer = `Convertible note at $${Math.round(parseFloat(askAmount) * 0.9).toLocaleString()} with a ${Math.round(parseFloat(equityPct) + 2)}% cap.`
-      } else if (shark.style === "strategic") {
-        verdict = valM <= 5 ? "IN" : "COUNTER"
-        comment = valM <= 5
-          ? `Smart positioning in a fragmented market. The moat is defensible and ${impliedValuation} is reasonable.`
-          : `${impliedValuation} is too rich for me at this stage. I need to see more market penetration.`
-        if (verdict === "COUNTER") counter_offer = `Same investment for ${Math.round(parseFloat(equityPct) + 3)}% — that values you at ${`$${((parseFloat(askAmount) / ((parseFloat(equityPct) + 3) / 100)) / 1_000_000).toFixed(1)}M`}.`
-      } else if (shark.style === "empathetic") {
-        verdict = score >= 5 ? "IN" : "OUT"
-        comment = score >= 5
-          ? `I love the story and mission. The customer pain is real. I\'m in — let\'s build this together.`
-          : `The passion is there but the numbers aren\'t compelling enough for me to risk my money. I\'m out.`
-      } else {
-        verdict = score >= 6 && valM <= 6 ? "IN" : "OUT"
-        comment = verdict === "IN"
-          ? `The operational model is lean. ${String(ctx.revenue_model ?? "Revenue model")} can scale. Let\'s do it.`
-          : `Margins worry me. Until you demonstrate unit economics work at scale, I\'m out.`
-      }
-      return { shark: shark.name, verdict, comment, counter_offer }
-    })
-  }
-
-  const inCount    = reactions.filter(r => r.verdict === "IN").length
   const counterCount = reactions.filter(r => r.verdict === "COUNTER").length
 
   return (
@@ -541,6 +504,18 @@ function SharkTankTab({ plan }: { plan: BusinessPlan }) {
           {loading ? "🤖 AI sharks are deliberating (15-30s)..." : pitched ? "🔄 Pitch Again" : "🎙 Step Into the Tank"}
         </button>
       </div>
+
+      {/* Error (genuine — no fabricated reactions) */}
+      {sharkError && !loading && (
+        <div className="rounded-2xl p-4 flex items-start gap-3"
+          style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)" }}>
+          <span className="text-lg">⚠️</span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold" style={{ color: "rgb(252,165,165)" }}>Couldn&apos;t run the pitch</p>
+            <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.55)" }}>{sharkError}</p>
+          </div>
+        </div>
+      )}
 
       {/* Results */}
       {pitched && reactions.length > 0 && (

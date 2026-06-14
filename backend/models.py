@@ -8,10 +8,12 @@ ModelKey = Literal[
     "gemini-3.1-flash-lite",   # OK — fast & reliable
     "gemini-2.5-flash-lite",   # OK — stable fallback
     "gemini-2.5-flash",        # Timeout under load but valid model
-    "gemini-2.5-pro",          # 429 on free tier — works with billing
     "insforge-gateway",        # InsForge Model Gateway (OpenRouter free models)
     "nvidia-llama",            # NVIDIA NIM dedicated free endpoint
+    "nvidia-nemotron",         # NVIDIA Nemotron 3 Super 120B (reasoning model)
     # Legacy / dead entries (preserved so old requests don't break):
+    "gemini-2.5-pro",
+    "deepseek-v4",
     "gemini-3-flash-preview",
     "gemini-2.0-flash",
     "gemini-1.5-flash",
