@@ -1,0 +1,17 @@
+# InsForge Compute config for the PitchCraft FastAPI backend.
+# Deploy with:  npx @insforge/cli compute deploy backend/ --name pitchcraft-api
+#
+# Fly.io container specs (Free plan: 120 h/month).
+# The app reads every env var from InsForge Secrets at deploy time.
+
+[compute]
+name        = "pitchcraft-api"
+# Source-mode deploy (flyctl remote build). Requires flyctl on PATH.
+# Alternatively use image-mode after building with Docker.
+dockerfile  = "Dockerfile"
+
+[compute.env]
+# Non-secret runtime config (secrets are injected automatically from
+# `insforge secrets list`). PORT is injected by Fly.io at runtime.
+PYTHONUNBUFFERED          = "1"
+PYTHONDONTWRITEBYTECODE   = "1"

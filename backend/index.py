@@ -95,12 +95,14 @@ app.add_middleware(
 
 @app.get("/api/health")
 async def health():
+    from agent import insforge_gateway_ready, insforge_model_client, _nvidia_nim_client
     return {
         "status": "ok",
         "service": "PitchCraft Agent",
         "gemini": _gemini_ready(),
         "insforge": insforge_ready(),
         "insforge_gateway": insforge_gateway_ready(),
+        "nvidia_nim": _nvidia_nim_client() is not None,
     }
 
 

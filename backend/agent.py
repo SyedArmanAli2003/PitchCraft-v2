@@ -77,6 +77,32 @@ except Exception:  # pragma: no cover - openai optional at runtime
 
 _INSFORGE_GATEWAY_BASE = os.getenv("INSFORGE_GATEWAY_BASE", "https://openrouter.ai/api/v1")
 
+# ---------------------------------------------------------------------------
+# NVIDIA NIM — free dedicated endpoint for Llama 3.3 70B (separate from the
+# InsForge/OpenRouter free-tier pool, so it isn't affected by the same 429
+# storms). Used first before the InsForge gateway models.
+# ---------------------------------------------------------------------------
+_NVIDIA_NIM_BASE = "https://integrate.api.nvidia.com/v1"
+_NVIDIA_NIM_MODEL = "meta/llama-3.3-70b-instruct"
+
+
+def _nvidia_nim_key() -> str:
+    return (os.getenv("NVIDIA_NIM_API_KEY") or "").strip()
+
+
+def _nvidia_nim_client():
+    """OpenAI-compatible client for NVIDIA NIM free endpoint."""
+    if not _OPENAI_SDK_AVAILABLE:
+        return None
+    key = _nvidia_nim_key()
+    if not key:
+        return None
+    try:
+        return _OpenAICompat(base_url=_NVIDIA_NIM_BASE, api_key=key,
+                             max_retries=0, timeout=30.0)
+    except Exception:
+        return None
+
 
 def _insforge_gateway_key() -> str:
     return (os.getenv("OPENROUTER_API_KEY") or "").strip()
@@ -100,9 +126,11 @@ def insforge_model_client():
 
 
 def insforge_gateway_ready() -> bool:
-    """True when the InsForge Model Gateway client can be constructed (key set).
+    """True when at least one free generation path is configured:
+    - NVIDIA NIM (dedicated free endpoint), or
+    - InsForge Model Gateway (OpenRouter free pool).
     Surfaced as `insforge_gateway` in /api/health."""
-    return insforge_model_client() is not None
+    return _nvidia_nim_client() is not None or insforge_model_client() is not None
 
 # ---------------------------------------------------------------------------
 # API key pool — cycles through GEMINI_API_KEY_1 … _N on 429 / quota errors
@@ -306,21 +334,34 @@ def _call_with_key_rotation(prompt: str, model_id: str, keys: list[str]) -> dict
 # ---------------------------------------------------------------------------
 # InsForge Model Gateway generation (free OpenRouter models)
 # ---------------------------------------------------------------------------
-# Free, reliable fallback so PitchCraft can run end-to-end at $0 even with no
-# Gemini keys. Free models are rate-limited upstream (429), so we rotate through
-# several and let the caller retry. INSFORGE_GATEWAY_MODEL (if set) is tried
-# first. All are OpenAI-compatible chat completions in forced-JSON mode.
-_GATEWAY_FREE_MODELS = [
-    "meta-llama/llama-3.3-70b-instruct:free",
+# Free fallback cascade (in priority order) using the InsForge gateway key.
+# Models selected from the InsForge dashboard "free" filter — largest/best
+# instruction-tuned ones listed first; small fallbacks at the end.
+# The NVIDIA NIM path is tried first (dedicated free endpoint, more reliable
+# than the shared OpenRouter free pool).
+_INSFORGE_GATEWAY_FREE_MODELS = [
+    # Google Gemma 4 — instruction-tuned, great for JSON, free on InsForge
+    "google/gemma-4-31b-it:free",
+    "google/gemma-4-26b-a4b-it:free",
+    # OpenAI OSS 120B — largest free model available
+    "openai/gpt-oss-120b:free",
+    # NVIDIA Nemotron via OpenRouter (same family as NIM, different pool)
+    "nvidia/nemotron-3-super-120b-a12b:free",
+    "nvidia/nemotron-3-ultra-550b-a55b:free",
+    # Qwen3 — strong reasoning, reliable 80B
     "qwen/qwen3-next-80b-a3b-instruct:free",
+    # Meta Llama 3.3 70B via OpenRouter (as OpenRouter pool fallback)
+    "meta-llama/llama-3.3-70b-instruct:free",
+    # Smaller reliable fallbacks
     "nousresearch/hermes-3-llama-3.1-405b:free",
-    "meta-llama/llama-3.2-3b-instruct:free",
+    "openai/gpt-oss-20b:free",
+    "qwen/qwen3-coder:free",
 ]
 
 
 def _gateway_models() -> list[str]:
     preferred = (os.getenv("INSFORGE_GATEWAY_MODEL") or "").strip()
-    models = ([preferred] if preferred else []) + _GATEWAY_FREE_MODELS
+    models = ([preferred] if preferred else []) + _INSFORGE_GATEWAY_FREE_MODELS
     seen, ordered = set(), []
     for m in models:
         if m and m not in seen:
@@ -330,16 +371,37 @@ def _gateway_models() -> list[str]:
 
 
 def _call_gateway_json(prompt: str) -> dict:
-    """Generate JSON via the InsForge Model Gateway, rotating across free
-    OpenRouter models on rate-limit. Raises if the gateway is unconfigured or
-    every free model is exhausted."""
-    client = insforge_model_client()
-    if client is None:
-        raise RuntimeError("InsForge Model Gateway not configured")
+    """Generate JSON via two free paths, in order:
+    1. NVIDIA NIM free endpoint (meta/llama-3.3-70b-instruct) — dedicated,
+       more reliable than the shared OpenRouter free pool.
+    2. InsForge Model Gateway (OpenRouter) — rotates across the curated
+       free-model list above; raises if all are exhausted.
+    """
+    # ── NVIDIA NIM first ──────────────────────────────────────────────────────
+    nim = _nvidia_nim_client()
+    if nim:
+        try:
+            resp = nim.chat.completions.create(
+                model=_NVIDIA_NIM_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.7,
+                max_tokens=2048,
+            )
+            text = resp.choices[0].message.content if resp.choices else None
+            if text:
+                print(f"✅ NVIDIA NIM answered via {_NVIDIA_NIM_MODEL}")
+                return parse_json_response(text)
+        except Exception as nim_err:
+            print(f"⚠️  NVIDIA NIM failed ({type(nim_err).__name__}), trying InsForge gateway")
+
+    # ── InsForge gateway (OpenRouter free pool) ───────────────────────────────
+    gw_client = insforge_model_client()
+    if gw_client is None:
+        raise RuntimeError("InsForge Model Gateway not configured and NVIDIA NIM unavailable")
     last_err: Exception | None = None
     for model in _gateway_models():
         try:
-            resp = client.chat.completions.create(
+            resp = gw_client.chat.completions.create(
                 model=model,
                 messages=[{"role": "user", "content": prompt}],
                 response_format={"type": "json_object"},

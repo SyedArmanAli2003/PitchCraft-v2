@@ -1,0 +1,7 @@
+
+exit=0
+NIM_KEY True
+NIM_CLIENT True
+GW_READY True
+GATEWAY_MODELS_0 google/gemma-4-31b-it:free
+
