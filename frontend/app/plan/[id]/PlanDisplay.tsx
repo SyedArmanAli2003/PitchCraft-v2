@@ -432,6 +432,7 @@ function SharkTankTab({ plan }: { plan: BusinessPlan }) {
       setLoading(false)
     }
   }
+  const inCount      = reactions.filter(r => r.verdict === "IN").length
   const counterCount = reactions.filter(r => r.verdict === "COUNTER").length
 
   return (
