@@ -370,65 +370,118 @@ def _gateway_models() -> list[str]:
     return ordered
 
 
+def _parse_valid_json(text: str | None) -> dict | None:
+    """Try to parse text as JSON. Returns None if the response is not valid
+    structured JSON (catches models that return error prose instead of JSON)."""
+    if not text:
+        return None
+    result = parse_json_response(text)
+    if "raw" in result and len(result) == 1:
+        return None
+    return result
+
+
+def _call_nvidia_json(prompt: str) -> dict:
+    """NVIDIA NIM free endpoint only (meta/llama-3.3-70b-instruct)."""
+    nim = _nvidia_nim_client()
+    if not nim:
+        raise RuntimeError("NVIDIA NIM not configured (NVIDIA_NIM_API_KEY missing)")
+    resp = nim.chat.completions.create(
+        model=_NVIDIA_NIM_MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.7,
+        max_tokens=2048,
+    )
+    text = resp.choices[0].message.content if resp.choices else None
+    result = _parse_valid_json(text)
+    if result is None:
+        raise RuntimeError(f"NVIDIA NIM returned non-JSON: {(text or '')[:200]}")
+    print(f"✅ NVIDIA NIM answered via {_NVIDIA_NIM_MODEL}")
+    return result
+
+
+def _call_openrouter_json(prompt: str) -> dict:
+    """OpenRouter free models only. Tries with response_format first; if the
+    model rejects it (400), retries without it on the same model before moving on."""
+    gw_client = insforge_model_client()
+    if gw_client is None:
+        raise RuntimeError("InsForge Model Gateway not configured (OPENROUTER_API_KEY missing)")
+    last_err: Exception | None = None
+    for model in _gateway_models():
+        for use_json_mode in (True, False):
+            kwargs: dict = {
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.7,
+                "max_tokens": 2048,
+            }
+            if use_json_mode:
+                kwargs["response_format"] = {"type": "json_object"}
+            try:
+                resp = gw_client.chat.completions.create(**kwargs)
+                text = resp.choices[0].message.content if resp.choices else None
+                result = _parse_valid_json(text)
+                if result is None:
+                    raise RuntimeError(f"Non-JSON response: {(text or '')[:200]}")
+                print(f"✅ OpenRouter answered via {model}" + (" (json_mode)" if use_json_mode else ""))
+                return result
+            except Exception as e:
+                err_str = str(e)
+                # If json_mode failed with 400 (unsupported), try without it
+                if use_json_mode and "400" in err_str:
+                    print(f"⚠️  {model} no json_mode support, trying without")
+                    continue
+                print(f"⚠️  Gateway model {model} failed ({type(e).__name__})")
+                last_err = e
+                break
+    raise last_err or RuntimeError("All OpenRouter free models exhausted.")
+
+
 def _call_gateway_json(prompt: str) -> dict:
     """Generate JSON via two free paths, in order:
     1. NVIDIA NIM free endpoint (meta/llama-3.3-70b-instruct) — dedicated,
        more reliable than the shared OpenRouter free pool.
     2. InsForge Model Gateway (OpenRouter) — rotates across the curated
-       free-model list above; raises if all are exhausted.
+       free-model list; raises if all are exhausted.
     """
-    # ── NVIDIA NIM first ──────────────────────────────────────────────────────
-    nim = _nvidia_nim_client()
-    if nim:
-        try:
-            resp = nim.chat.completions.create(
-                model=_NVIDIA_NIM_MODEL,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.7,
-                max_tokens=2048,
-            )
-            text = resp.choices[0].message.content if resp.choices else None
-            if text:
-                print(f"✅ NVIDIA NIM answered via {_NVIDIA_NIM_MODEL}")
-                return parse_json_response(text)
-        except Exception as nim_err:
-            print(f"⚠️  NVIDIA NIM failed ({type(nim_err).__name__}), trying InsForge gateway")
+    try:
+        return _call_nvidia_json(prompt)
+    except Exception as nim_err:
+        print(f"⚠️  NVIDIA NIM failed ({type(nim_err).__name__}), trying InsForge gateway")
 
-    # ── InsForge gateway (OpenRouter free pool) ───────────────────────────────
-    gw_client = insforge_model_client()
-    if gw_client is None:
-        raise RuntimeError("InsForge Model Gateway not configured and NVIDIA NIM unavailable")
-    last_err: Exception | None = None
-    for model in _gateway_models():
-        try:
-            resp = gw_client.chat.completions.create(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                response_format={"type": "json_object"},
-                temperature=0.7,
-            )
-            text = resp.choices[0].message.content if resp.choices else None
-            if not text:
-                raise RuntimeError(f"Empty response from gateway model {model}")
-            print(f"✅ InsForge gateway answered via {model}")
-            return parse_json_response(text)
-        except Exception as e:
-            print(f"⚠️  Gateway model {model} failed ({type(e).__name__})")
-            last_err = e
-            continue
-    raise last_err or RuntimeError("All InsForge gateway free models exhausted.")
+    return _call_openrouter_json(prompt)
 
 
 async def _generate(prompt: str, model_key: str, keys: list[str]) -> tuple[dict, str]:
     """
-    Try the chosen Gemini tier, then cascade to lower tiers on any failure, then
-    fall back to the free InsForge Model Gateway (OpenRouter). On a quota
-    failure between Gemini tiers, waits 12 s so the per-minute window can reset.
-    Returns (result_dict, actually_used_model_key). The gateway returns the
-    sentinel "insforge-gateway" so the UI can badge it.
+    Route the prompt to the right model path based on model_key:
+
+      - "nvidia-llama"      -> NVIDIA NIM dedicated free endpoint only
+      - "insforge-gateway"  -> InsForge/OpenRouter free models only
+      - any Gemini key      -> Gemini cascade -> NVIDIA NIM -> OpenRouter fallback
+
+    Returns (result_dict, actually_used_model_key). The gateway returns
+    "insforge-gateway" so the UI can badge it.
     """
-    start = CASCADE_ORDER.index(model_key) if model_key in CASCADE_ORDER else 0
     last_err: Exception | None = None
+
+    # ── Direct-to-gateway paths (skip Gemini entirely) ──────────────────────
+    if model_key == "nvidia-llama":
+        try:
+            result = await asyncio.to_thread(_call_nvidia_json, prompt)
+            return result, "nvidia-llama"
+        except Exception as e:
+            raise RuntimeError(f"NVIDIA NIM failed: {e}") from e
+
+    if model_key == "insforge-gateway":
+        try:
+            result = await asyncio.to_thread(_call_openrouter_json, prompt)
+            return result, "insforge-gateway"
+        except Exception as e:
+            raise RuntimeError(f"InsForge gateway failed: {e}") from e
+
+    # ── Gemini cascade ──────────────────────────────────────────────────────
+    start = CASCADE_ORDER.index(model_key) if model_key in CASCADE_ORDER else 0
 
     if keys:
         for i, candidate in enumerate(CASCADE_ORDER[start:]):
@@ -443,11 +496,10 @@ async def _generate(prompt: str, model_key: str, keys: list[str]) -> tuple[dict,
                 is_quota = any(tok in err_lower for tok in ("429", "quota", "rate_limit", "resource_exhausted"))
                 print(f"⚠️  Cascade: {cfg['model_id']} failed ({type(e).__name__}) quota={is_quota}")
                 last_err = e
-                # Brief pause between tiers when rate-limited — lets the window reset a bit.
                 if is_quota and i < len(CASCADE_ORDER) - 1:
                     await asyncio.sleep(12)
 
-    # Free fallback: InsForge Model Gateway (works with no Gemini keys at all).
+    # Free fallback: NVIDIA NIM -> InsForge/OpenRouter (works with no Gemini keys).
     try:
         result = await asyncio.to_thread(_call_gateway_json, prompt)
         return result, "insforge-gateway"
