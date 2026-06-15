@@ -1,4 +1,6 @@
+/* eslint-disable react/no-unescaped-entities */
 "use client"
+// eslint-disable-next-line react/no-unescaped-entities
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import type { BusinessPlan, AuditChain } from "@/lib/types"
@@ -17,12 +19,12 @@ const STEP_NAMES: Record<number, string> = {
 }
 
 // ── Gender-heuristic avatar ──────────────────────────────────────────────────
-const FEMALE_NAMES = new Set(["priya","sara","sarah","maya","ananya","pooja","neha","kavya","divya","anjali","shreya","deepika","meena","sunita","rekha","geeta","lata","sita","lakshmi","radha","gita","usha","asha","nisha","mona","sona","riya","tanya","swati","priti","rati","rani","devi","lisa","mary","emma","anna","kate","jane","amy","emily","jessica","sophia","olivia","ava","isabella","mia","ella","chloe","grace","aisha","fatima","zara","layla","hana","nour","yasmin","amira"])
+const FEMALE_NAMES = new Set(["priya", "sara", "sarah", "maya", "ananya", "pooja", "neha", "kavya", "divya", "anjali", "shreya", "deepika", "meena", "sunita", "rekha", "geeta", "lata", "sita", "lakshmi", "radha", "gita", "usha", "asha", "nisha", "mona", "sona", "riya", "tanya", "swati", "priti", "rati", "rani", "devi", "lisa", "mary", "emma", "anna", "kate", "jane", "amy", "emily", "jessica", "sophia", "olivia", "ava", "isabella", "mia", "ella", "chloe", "grace", "aisha", "fatima", "zara", "layla", "hana", "nour", "yasmin", "amira"])
 
 function PersonaAvatar({ name, size = 48 }: { name: string; size?: number }) {
   const firstName = name.split(/[,\s]+/)[0].toLowerCase()
   const isFemale = FEMALE_NAMES.has(firstName)
-  const initials = name.split(" ").filter(Boolean).map(n => n[0]).join("").slice(0,2).toUpperCase()
+  const initials = name.split(" ").filter(Boolean).map(n => n[0]).join("").slice(0, 2).toUpperCase()
   const id = `grad-${initials}`
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" style={{ flexShrink: 0 }}>
@@ -163,7 +165,7 @@ function InvestorEmailBox({ plan }: { plan: BusinessPlan }) {
 
 Hi [Investor Name],
 
-I'm building ${plan.idea} — ${v.one_line_summary}.
+I&apos;m building ${plan.idea} — ${v.one_line_summary}.
 
 The Problem: ${b.problem}
 
@@ -399,11 +401,11 @@ function RoadmapTab({ plan }: { plan: BusinessPlan }) {
 
 // ── Shark Tank Simulator Tab ────────────────────────────────────────────────────
 const SHARKS = [
-  { name: "Mark C.",   icon: "⚡", style: "tough",        color: "rgba(239,68,68,0.8)",   bg: "rgba(239,68,68,0.07)",   trait: "Demands proof of traction and ruthless unit economics. Will negotiate hard." },
-  { name: "Sarah K.",  icon: "🎯", style: "strategic",    color: "rgba(59,130,246,0.8)",  bg: "rgba(59,130,246,0.07)",  trait: "Looks for defensible moats, brand-building potential, and long-term vision." },
-  { name: "Raj P.",    icon: "💡", style: "tech-focused", color: "rgba(124,58,237,0.8)",  bg: "rgba(124,58,237,0.07)",  trait: "Obsessed with AI, scalability, and recurring revenue. Excited by technical differentiation." },
-  { name: "Lisa T.",   icon: "🌟", style: "empathetic",   color: "rgba(234,179,8,0.8)",   bg: "rgba(234,179,8,0.07)",   trait: "Connects emotionally with the founder story and social impact. Values authenticity." },
-  { name: "Carlos M.", icon: "📊", style: "operational",  color: "rgba(34,197,94,0.8)",   bg: "rgba(34,197,94,0.07)",   trait: "Focuses on supply chain, margins, operational efficiency, and unit economics." },
+  { name: "Mark C.", icon: "⚡", style: "tough", color: "rgba(239,68,68,0.8)", bg: "rgba(239,68,68,0.07)", trait: "Demands proof of traction and ruthless unit economics. Will negotiate hard." },
+  { name: "Sarah K.", icon: "🎯", style: "strategic", color: "rgba(59,130,246,0.8)", bg: "rgba(59,130,246,0.07)", trait: "Looks for defensible moats, brand-building potential, and long-term vision." },
+  { name: "Raj P.", icon: "💡", style: "tech-focused", color: "rgba(124,58,237,0.8)", bg: "rgba(124,58,237,0.07)", trait: "Obsessed with AI, scalability, and recurring revenue. Excited by technical differentiation." },
+  { name: "Lisa T.", icon: "🌟", style: "empathetic", color: "rgba(234,179,8,0.8)", bg: "rgba(234,179,8,0.07)", trait: "Connects emotionally with the founder story and social impact. Values authenticity." },
+  { name: "Carlos M.", icon: "📊", style: "operational", color: "rgba(34,197,94,0.8)", bg: "rgba(34,197,94,0.07)", trait: "Focuses on supply chain, margins, operational efficiency, and unit economics." },
 ]
 
 type Reaction = { shark: string; verdict: "IN" | "OUT" | "COUNTER"; comment: string; counter_offer?: string }
@@ -533,9 +535,9 @@ function SharkTankTab({ plan }: { plan: BusinessPlan }) {
             <h2 className="text-lg font-bold text-white">Shark Tank Simulator</h2>
             <p className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>
               {phase === "ask" ? "Set your ask, then prepare for a pre-pitch Q&A with the sharks." :
-               phase === "qa" ? "The sharks have questions. Answer them before they decide." :
-               phase === "verdict" ? "Sharks are deliberating based on your answers..." :
-               "Final verdicts are in."}
+                phase === "qa" ? "The sharks have questions. Answer them before they decide." :
+                  phase === "verdict" ? "Sharks are deliberating based on your answers..." :
+                    "Final verdicts are in."}
             </p>
           </div>
         </div>
@@ -543,7 +545,7 @@ function SharkTankTab({ plan }: { plan: BusinessPlan }) {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
             {[
               { label: "Viability", val: `${v.viability_score}/10`, ok: v.viability_score >= 6, tip: "Score ≥ 6 needed" },
-              { label: "Market", val: m?.market_size?.slice(0,12) ?? "—", ok: !!m?.market_size, tip: "Market size known" },
+              { label: "Market", val: m?.market_size?.slice(0, 12) ?? "—", ok: !!m?.market_size, tip: "Market size known" },
               { label: "Revenue Model", val: b?.revenue_model ? "✓ Defined" : "✗ Missing", ok: !!b?.revenue_model, tip: "Needs clear model" },
               { label: "Funding Ask", val: f?.funding_needed ?? "Set below", ok: !!f?.funding_needed, tip: "Need a clear ask" },
             ].map(item => (
@@ -903,8 +905,8 @@ function PitchCoachTab({ plan }: { plan: BusinessPlan }) {
 
   const priorityColor = (p: string) =>
     p === "High" ? { c: "rgb(252,165,165)", bg: "rgba(239,68,68,0.12)", b: "rgba(239,68,68,0.3)" }
-    : p === "Medium" ? { c: "rgb(250,204,21)", bg: "rgba(234,179,8,0.12)", b: "rgba(234,179,8,0.3)" }
-    : { c: "rgb(74,222,128)", bg: "rgba(34,197,94,0.12)", b: "rgba(34,197,94,0.3)" }
+      : p === "Medium" ? { c: "rgb(250,204,21)", bg: "rgba(234,179,8,0.12)", b: "rgba(234,179,8,0.3)" }
+        : { c: "rgb(74,222,128)", bg: "rgba(34,197,94,0.12)", b: "rgba(34,197,94,0.3)" }
 
   return (
     <div className="space-y-6">
@@ -1067,14 +1069,14 @@ export default function PlanDisplay({ plan: planProp }: { plan: BusinessPlan }) 
       if (cancelled) return
       setLivePatch(prev => ({
         ...prev,
-        status:          (msg.status as BusinessPlan["status"]) ?? prev.status,
-        validation:      (msg.validation as BusinessPlan["validation"]) ?? prev.validation,
+        status: (msg.status as BusinessPlan["status"]) ?? prev.status,
+        validation: (msg.validation as BusinessPlan["validation"]) ?? prev.validation,
         market_research: (msg.market_research as BusinessPlan["market_research"]) ?? prev.market_research,
-        personas:        (msg.personas as BusinessPlan["personas"]) ?? prev.personas,
-        business_plan:   (msg.business_plan as BusinessPlan["business_plan"]) ?? prev.business_plan,
-        financials:      (msg.financials as BusinessPlan["financials"]) ?? prev.financials,
-        risks:           (msg.risks as BusinessPlan["risks"]) ?? prev.risks,
-        share_token:     (msg.share_token as string) ?? prev.share_token,
+        personas: (msg.personas as BusinessPlan["personas"]) ?? prev.personas,
+        business_plan: (msg.business_plan as BusinessPlan["business_plan"]) ?? prev.business_plan,
+        financials: (msg.financials as BusinessPlan["financials"]) ?? prev.financials,
+        risks: (msg.risks as BusinessPlan["risks"]) ?? prev.risks,
+        share_token: (msg.share_token as string) ?? prev.share_token,
       }))
     }
 
@@ -1158,7 +1160,7 @@ export default function PlanDisplay({ plan: planProp }: { plan: BusinessPlan }) 
             </p>
             <h1 className="text-2xl font-bold text-white leading-snug">{plan.idea}</h1>
             <p className="text-sm mt-1" suppressHydrationWarning style={{ color: "rgba(255,255,255,0.35)" }}>
-              Generated {new Date(plan.created_at).toLocaleDateString("en-IN", { day:"numeric", month:"long", year:"numeric", timeZone: "UTC" })}
+              Generated {new Date(plan.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })}
             </p>
           </div>
           <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end">
@@ -1179,12 +1181,12 @@ export default function PlanDisplay({ plan: planProp }: { plan: BusinessPlan }) 
         <div className="flex gap-1 mb-6 p-1 rounded-xl overflow-x-auto"
           style={{ background: "hsl(240,15%,8%)", border: "1px solid rgba(255,255,255,0.06)" }}>
           {([
-            { id: "plan",    label: "Business Plan",  icon: "📄" },
-            { id: "deck",    label: "Pitch Deck",      icon: "🎯" },
-            { id: "roadmap", label: "90-Day Plan",     icon: "🗺️" },
-            { id: "tank",    label: "🦈 Shark Tank",    icon: "" },
-            { id: "coach",   label: "Pitch Coach",     icon: "🎓" },
-            { id: "audit",   label: "Audit Trail",     icon: "🔒" },
+            { id: "plan", label: "Business Plan", icon: "📄" },
+            { id: "deck", label: "Pitch Deck", icon: "🎯" },
+            { id: "roadmap", label: "90-Day Plan", icon: "🗺️" },
+            { id: "tank", label: "🦈 Shark Tank", icon: "" },
+            { id: "coach", label: "Pitch Coach", icon: "🎓" },
+            { id: "audit", label: "Audit Trail", icon: "🔒" },
           ] as { id: Tab; label: string; icon: string }[]).map(tab => (
             <button
               key={tab.id}
@@ -1295,7 +1297,7 @@ export default function PlanDisplay({ plan: planProp }: { plan: BusinessPlan }) 
                         📈 Statista
                       </a>
                       <a
-                        href={`https://www.crunchbase.com/discover/organization.companies/field/organizations/categories/${encodeURIComponent(plan.idea.split(" ").slice(0,2).join("-").toLowerCase())}`}
+                        href={`https://www.crunchbase.com/discover/organization.companies/field/organizations/categories/${encodeURIComponent(plan.idea.split(" ").slice(0, 2).join("-").toLowerCase())}`}
                         target="_blank" rel="noopener noreferrer"
                         className="text-xs px-3 py-1.5 rounded-full transition-all"
                         style={{ background: "rgba(234,179,8,0.08)", color: "rgb(250,204,21)", border: "1px solid rgba(234,179,8,0.2)" }}
@@ -1383,9 +1385,9 @@ export default function PlanDisplay({ plan: planProp }: { plan: BusinessPlan }) 
                 {/* Problem / Solution / USP */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
                   {([
-                    { label: "Problem",  value: b.problem,                    border: "rgba(239,68,68,0.5)",    bg: "rgba(239,68,68,0.04)"    },
-                    { label: "Solution", value: b.solution,                   border: "rgba(34,197,94,0.5)",    bg: "rgba(34,197,94,0.04)"    },
-                    { label: "USP",      value: b.unique_value_proposition,   border: "rgba(124,58,237,0.5)",   bg: "rgba(124,58,237,0.04)"   },
+                    { label: "Problem", value: b.problem, border: "rgba(239,68,68,0.5)", bg: "rgba(239,68,68,0.04)" },
+                    { label: "Solution", value: b.solution, border: "rgba(34,197,94,0.5)", bg: "rgba(34,197,94,0.04)" },
+                    { label: "USP", value: b.unique_value_proposition, border: "rgba(124,58,237,0.5)", bg: "rgba(124,58,237,0.04)" },
                   ]).map(({ label, value, border, bg }) => (
                     <div key={label} className="p-4 rounded-xl flex flex-col gap-2"
                       style={{ background: bg, borderTop: `2px solid ${border}` }}>
@@ -1473,7 +1475,7 @@ export default function PlanDisplay({ plan: planProp }: { plan: BusinessPlan }) 
                   })}
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {([["Startup Cost", f.startup_cost, "💼"],["Monthly Burn", f.monthly_burn, "🔥"],["Break Even", `Month ${f.break_even_month}`, "📅"],["Funding", f.funding_needed, "💰"]] as [string,string,string][]).map(([lbl, val, icon]) => (
+                  {([["Startup Cost", f.startup_cost, "💼"], ["Monthly Burn", f.monthly_burn, "🔥"], ["Break Even", `Month ${f.break_even_month}`, "📅"], ["Funding", f.funding_needed, "💰"]] as [string, string, string][]).map(([lbl, val, icon]) => (
                     <div key={lbl} className="fin-stat-card text-center rounded-xl p-3 cursor-default" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
                       <p className="text-lg mb-0.5">{icon}</p>
                       <p className="font-bold text-white text-sm">{val}</p>
@@ -1492,7 +1494,7 @@ export default function PlanDisplay({ plan: planProp }: { plan: BusinessPlan }) 
                   {r.risks?.map((risk, i) => {
                     const pct = risk.severity === "High" ? 82 : risk.severity === "Medium" ? 50 : 20
                     const clr = risk.severity === "High" ? "rgba(239,68,68,0.85)" : risk.severity === "Medium" ? "rgba(234,179,8,0.85)" : "rgba(34,197,94,0.85)"
-                    const bg  = risk.severity === "High" ? "rgba(239,68,68,0.15)" : risk.severity === "Medium" ? "rgba(234,179,8,0.15)" : "rgba(34,197,94,0.15)"
+                    const bg = risk.severity === "High" ? "rgba(239,68,68,0.15)" : risk.severity === "Medium" ? "rgba(234,179,8,0.15)" : "rgba(34,197,94,0.15)"
                     const txt = risk.severity === "High" ? "rgb(252,165,165)" : risk.severity === "Medium" ? "rgb(250,204,21)" : "rgb(74,222,128)"
                     return (
                       <div key={i} className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
@@ -1521,10 +1523,10 @@ export default function PlanDisplay({ plan: planProp }: { plan: BusinessPlan }) 
                 {r.swot && (
                   <div className="grid grid-cols-2 gap-3">
                     {([
-                      { label:"Strengths", items: r.swot.strengths, bg:"rgba(34,197,94,0.08)", border:"rgba(34,197,94,0.2)" },
-                      { label:"Weaknesses", items: r.swot.weaknesses, bg:"rgba(239,68,68,0.08)", border:"rgba(239,68,68,0.2)" },
-                      { label:"Opportunities", items: r.swot.opportunities, bg:"rgba(59,130,246,0.08)", border:"rgba(59,130,246,0.2)" },
-                      { label:"Threats", items: r.swot.threats, bg:"rgba(234,179,8,0.08)", border:"rgba(234,179,8,0.2)" },
+                      { label: "Strengths", items: r.swot.strengths, bg: "rgba(34,197,94,0.08)", border: "rgba(34,197,94,0.2)" },
+                      { label: "Weaknesses", items: r.swot.weaknesses, bg: "rgba(239,68,68,0.08)", border: "rgba(239,68,68,0.2)" },
+                      { label: "Opportunities", items: r.swot.opportunities, bg: "rgba(59,130,246,0.08)", border: "rgba(59,130,246,0.2)" },
+                      { label: "Threats", items: r.swot.threats, bg: "rgba(234,179,8,0.08)", border: "rgba(234,179,8,0.2)" },
                     ]).map(({ label, items, bg, border }) => (
                       <div key={label} className="rounded-xl p-4" style={{ background: bg, border: `1px solid ${border}` }}>
                         <p className="text-xs font-semibold mb-2 uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.5)" }}>{label}</p>
@@ -1547,20 +1549,20 @@ export default function PlanDisplay({ plan: planProp }: { plan: BusinessPlan }) 
                 <p className="text-xs uppercase tracking-widest mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>Viability Radar</p>
                 <p className="text-xs mb-4" style={{ color: "rgba(255,255,255,0.3)" }}>How your startup scores across 5 key dimensions — larger area = stronger overall viability</p>
                 <RadarChart scores={[
-                  { label: "Market",      value: Math.min(10, Math.max(1, Math.round((m.opportunity_score ?? 7)))) },
-                  { label: "Revenue",     value: Math.min(10, Math.max(1, Math.round((v.viability_score ?? 7) * 0.9))) },
-                  { label: "Innovation",  value: Math.min(10, Math.max(1, Math.round((v.viability_score ?? 6) * 0.85))) },
+                  { label: "Market", value: Math.min(10, Math.max(1, Math.round((m.opportunity_score ?? 7)))) },
+                  { label: "Revenue", value: Math.min(10, Math.max(1, Math.round((v.viability_score ?? 7) * 0.9))) },
+                  { label: "Innovation", value: Math.min(10, Math.max(1, Math.round((v.viability_score ?? 6) * 0.85))) },
                   { label: "Competition", value: Math.min(10, Math.max(1, 10 - Math.min(9, (m.top_competitors?.length ?? 3) * 2))) },
-                  { label: "Execution",   value: Math.min(10, Math.max(1, Math.round((v.viability_score ?? 6) * 0.8))) },
+                  { label: "Execution", value: Math.min(10, Math.max(1, Math.round((v.viability_score ?? 6) * 0.8))) },
                 ]} />
                 {/* Axis legend */}
                 <div className="mt-4 space-y-2">
                   {([
-                    { axis: "Market",      desc: "Size and growth rate of the target market. High score = large, fast-growing opportunity." },
-                    { axis: "Revenue",     desc: "Strength of the revenue model and pricing power based on overall viability score." },
-                    { axis: "Innovation",  desc: "Degree of differentiation vs existing solutions. High = unique, hard-to-copy product." },
+                    { axis: "Market", desc: "Size and growth rate of the target market. High score = large, fast-growing opportunity." },
+                    { axis: "Revenue", desc: "Strength of the revenue model and pricing power based on overall viability score." },
+                    { axis: "Innovation", desc: "Degree of differentiation vs existing solutions. High = unique, hard-to-copy product." },
                     { axis: "Competition", desc: "Lower competition = higher score. Calculated from number of identified direct competitors." },
-                    { axis: "Execution",   desc: "Founder / team readiness and operational complexity. Derived from viability assessment." },
+                    { axis: "Execution", desc: "Founder / team readiness and operational complexity. Derived from viability assessment." },
                   ]).map(({ axis, desc }) => (
                     <div key={axis} className="flex items-start gap-2">
                       <span className="text-xs font-semibold flex-shrink-0 w-20" style={{ color: "hsl(258,80%,78%)" }}>{axis}</span>
@@ -1570,7 +1572,7 @@ export default function PlanDisplay({ plan: planProp }: { plan: BusinessPlan }) 
                 </div>
                 {/* Score band legend */}
                 <div className="flex gap-3 mt-4 pt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-                  {([{label:"1–4",sub:"Needs Work",c:"rgb(252,165,165)",bg:"rgba(239,68,68,0.1)"},{label:"5–7",sub:"Good",c:"rgb(250,204,21)",bg:"rgba(234,179,8,0.1)"},{label:"8–10",sub:"Excellent",c:"rgb(74,222,128)",bg:"rgba(34,197,94,0.1)"}]).map(b => (
+                  {([{ label: "1–4", sub: "Needs Work", c: "rgb(252,165,165)", bg: "rgba(239,68,68,0.1)" }, { label: "5–7", sub: "Good", c: "rgb(250,204,21)", bg: "rgba(234,179,8,0.1)" }, { label: "8–10", sub: "Excellent", c: "rgb(74,222,128)", bg: "rgba(34,197,94,0.1)" }]).map(b => (
                     <div key={b.label} className="flex-1 text-center rounded-lg py-1.5" style={{ background: b.bg }}>
                       <p className="text-xs font-bold" style={{ color: b.c }}>{b.label}</p>
                       <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>{b.sub}</p>

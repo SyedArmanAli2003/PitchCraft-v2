@@ -223,33 +223,33 @@ const DEMO_PLAN: { idea: string; steps: Array<{ step: number; name: string; data
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 const MODEL_ICONS: Partial<Record<string, string>> = {
-  "gemini-3.5-flash":       "◈",
-  "gemini-3.1-flash-lite":  "✧",
-  "gemini-2.5-flash-lite":  "▸",
-  "gemini-2.5-flash":       "⚡",
-  "nvidia-nemotron":        "🧠",
-  "insforge-gateway":       "◆",
-  "nvidia-llama":           "▲",
+  "gemini-3.5-flash": "◈",
+  "gemini-3.1-flash-lite": "✧",
+  "gemini-2.5-flash-lite": "▸",
+  "gemini-2.5-flash": "⚡",
+  "nvidia-nemotron": "🧠",
+  "insforge-gateway": "◆",
+  "nvidia-llama": "▲",
 }
 
 const MODEL_BADGES: Partial<Record<string, { label: string; color: string; bg: string; border: string }>> = {
-  "gemini-3.5-flash":       { label: "✅ Recommended · Working",          color: "hsl(160,90%,72%)",  bg: "rgba(34,197,94,0.12)",   border: "rgba(34,197,94,0.35)"   },
-  "gemini-3.1-flash-lite":  { label: "✅ Fast · Working",                 color: "hsl(213,95%,78%)",  bg: "rgba(59,130,246,0.12)",  border: "rgba(59,130,246,0.35)"  },
-  "gemini-2.5-flash-lite":  { label: "✅ Stable · Working",               color: "hsl(258,80%,78%)",  bg: "rgba(124,58,237,0.12)",  border: "rgba(124,58,237,0.3)"   },
-  "gemini-2.5-flash":       { label: "⚠️ May timeout under load",        color: "hsl(38,95%,72%)",   bg: "rgba(234,179,8,0.12)",   border: "rgba(234,179,8,0.35)"   },
-  "nvidia-nemotron":        { label: "🧠 NVIDIA Nemotron · Reasoning",   color: "hsl(120,60%,72%)",  bg: "rgba(34,197,94,0.12)",  border: "rgba(34,197,94,0.4)"   },
-  "insforge-gateway":       { label: "◆ InsForge · Always Free",          color: "rgb(52,211,153)",   bg: "rgba(16,185,129,0.12)",  border: "rgba(16,185,129,0.3)"   },
-  "nvidia-llama":           { label: "▲ NVIDIA NIM · Free Dedicated",     color: "hsl(120,60%,70%)",  bg: "rgba(34,197,94,0.1)",    border: "rgba(34,197,94,0.3)"    },
+  "gemini-3.5-flash": { label: "✅ Recommended · Working", color: "hsl(160,90%,72%)", bg: "rgba(34,197,94,0.12)", border: "rgba(34,197,94,0.35)" },
+  "gemini-3.1-flash-lite": { label: "✅ Fast · Working", color: "hsl(213,95%,78%)", bg: "rgba(59,130,246,0.12)", border: "rgba(59,130,246,0.35)" },
+  "gemini-2.5-flash-lite": { label: "✅ Stable · Working", color: "hsl(258,80%,78%)", bg: "rgba(124,58,237,0.12)", border: "rgba(124,58,237,0.3)" },
+  "gemini-2.5-flash": { label: "⚠️ May timeout under load", color: "hsl(38,95%,72%)", bg: "rgba(234,179,8,0.12)", border: "rgba(234,179,8,0.35)" },
+  "nvidia-nemotron": { label: "🧠 NVIDIA Nemotron · Reasoning", color: "hsl(120,60%,72%)", bg: "rgba(34,197,94,0.12)", border: "rgba(34,197,94,0.4)" },
+  "insforge-gateway": { label: "◆ InsForge · Always Free", color: "rgb(52,211,153)", bg: "rgba(16,185,129,0.12)", border: "rgba(16,185,129,0.3)" },
+  "nvidia-llama": { label: "▲ NVIDIA NIM · Free Dedicated", color: "hsl(120,60%,70%)", bg: "rgba(34,197,94,0.1)", border: "rgba(34,197,94,0.3)" },
 }
 
 const MODEL_DESC: Partial<Record<string, string>> = {
-  "gemini-3.5-flash":       "Latest Gemini Flash — confirmed working. Best quality output.",
-  "gemini-3.1-flash-lite":  "Lightweight Gemini 3.1 — fast, reliable, separate quota pool.",
-  "gemini-2.5-flash-lite":  "Gemini 2.5 Flash Lite — solid reasoning, stable free-tier quota.",
-  "gemini-2.5-flash":       "Deep reasoning model — may time out under high load. Try if others fail.",
-  "nvidia-nemotron":        "NVIDIA Nemotron 3 Super 120B via NIM — premium reasoning, fast and free.",
-  "insforge-gateway":       "Gemma 4 31B via InsForge Model Gateway — always free, no quota worries.",
-  "nvidia-llama":           "NVIDIA Llama 3.3 70B via NIM — dedicated free inference endpoint.",
+  "gemini-3.5-flash": "Latest Gemini Flash — confirmed working. Best quality output.",
+  "gemini-3.1-flash-lite": "Lightweight Gemini 3.1 — fast, reliable, separate quota pool.",
+  "gemini-2.5-flash-lite": "Gemini 2.5 Flash Lite — solid reasoning, stable free-tier quota.",
+  "gemini-2.5-flash": "Deep reasoning model — may time out under high load. Try if others fail.",
+  "nvidia-nemotron": "NVIDIA Nemotron 3 Super 120B via NIM — premium reasoning, fast and free.",
+  "insforge-gateway": "Gemma 4 31B via InsForge Model Gateway — always free, no quota worries.",
+  "nvidia-llama": "NVIDIA Llama 3.3 70B via NIM — dedicated free inference endpoint.",
 }
 
 function ModelSelector({
@@ -345,29 +345,29 @@ const INSPIRE_IDEAS = [
 function GenerateContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [idea, setIdea]              = useState("")
-  const [submitted, setSubmitted]    = useState(false)
-  const [steps, setSteps]            = useState<AgentStep[]>([])
-  const [planId, setPlanId]          = useState<string | null>(null)
+  const [idea, setIdea] = useState("")
+  const [submitted, setSubmitted] = useState(false)
+  const [steps, setSteps] = useState<AgentStep[]>([])
+  const [planId, setPlanId] = useState<string | null>(null)
   const [isStreaming, setIsStreaming] = useState(false)
-  const [showGate, setShowGate]      = useState(false)
-  const [gateData, setGateData]      = useState<Record<string, unknown> | null>(null)
-  const [inspireIdx, setInspireIdx]  = useState(0)
+  const [showGate, setShowGate] = useState(false)
+  const [gateData, setGateData] = useState<Record<string, unknown> | null>(null)
+  const [inspireIdx, setInspireIdx] = useState(0)
   const [inspireFlash, setInspireFlash] = useState(false)
   // Human-in-the-loop approval gate (after Step 2 / market research)
-  const [showApproval, setShowApproval]   = useState(false)
-  const [approvalId, setApprovalId]       = useState<string | null>(null)
-  const [approvalData, setApprovalData]   = useState<Record<string, unknown> | null>(null)
-  const [approvalBusy, setApprovalBusy]   = useState(false)
-  const [redirectNote, setRedirectNote]   = useState("")
-  const [redirectMode, setRedirectMode]   = useState(false)
-  const [stoppedMsg, setStoppedMsg]       = useState<string | null>(null)
-  const [models, setModels]          = useState<ModelOption[]>(FALLBACK_MODELS)
+  const [showApproval, setShowApproval] = useState(false)
+  const [approvalId, setApprovalId] = useState<string | null>(null)
+  const [approvalData, setApprovalData] = useState<Record<string, unknown> | null>(null)
+  const [approvalBusy, setApprovalBusy] = useState(false)
+  const [redirectNote, setRedirectNote] = useState("")
+  const [redirectMode, setRedirectMode] = useState(false)
+  const [stoppedMsg, setStoppedMsg] = useState<string | null>(null)
+  const [models, setModels] = useState<ModelOption[]>(FALLBACK_MODELS)
   const [selectedModel, setSelectedModel] = useState<ModelKey>("gemini-3.5-flash")
-  const [usedModel, setUsedModel]    = useState<string>("")
-  const [modelError, setModelError]  = useState<string | null>(null)
+  const [usedModel, setUsedModel] = useState<string>("")
+  const [modelError, setModelError] = useState<string | null>(null)
   // Demo / offline fallback state
-  const [demoMode, setDemoMode]       = useState(false)
+  const [demoMode, setDemoMode] = useState(false)
   const [demoComplete, setDemoComplete] = useState(false)
   const ideaRef = useRef(idea)
   ideaRef.current = idea
@@ -380,7 +380,7 @@ function GenerateContent() {
         router.replace("/login?redirect=/generate")
       }
     } catch { /* ignore SSR */ }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Fetch available models from backend and merge with free gateway models
@@ -407,17 +407,17 @@ function GenerateContent() {
       setIdea(demoIdea)
       setTimeout(() => startGeneration(demoIdea, "gemini-3.5-flash"), 1500)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const freshSteps = (modelKey: ModelKey = selectedModel): AgentStep[] => [
-    { stepNumber: 1, name: "Validate Idea",         status: "waiting", tool: modelKey },
-    { stepNumber: 2, name: "Research Market",       status: "waiting", tool: "insforge"  },
-    { stepNumber: 3, name: "Define Audience",       status: "waiting", tool: modelKey },
-    { stepNumber: 4, name: "Build Business Plan",   status: "waiting", tool: modelKey },
+    { stepNumber: 1, name: "Validate Idea", status: "waiting", tool: modelKey },
+    { stepNumber: 2, name: "Research Market", status: "waiting", tool: "insforge" },
+    { stepNumber: 3, name: "Define Audience", status: "waiting", tool: modelKey },
+    { stepNumber: 4, name: "Build Business Plan", status: "waiting", tool: modelKey },
     { stepNumber: 5, name: "Financial Projections", status: "waiting", tool: modelKey },
-    { stepNumber: 6, name: "Risk Analysis",         status: "waiting", tool: modelKey },
-    { stepNumber: 7, name: "Save & Export",         status: "waiting", tool: "system"  },
+    { stepNumber: 6, name: "Risk Analysis", status: "waiting", tool: modelKey },
+    { stepNumber: 7, name: "Save & Export", status: "waiting", tool: "system" },
   ]
 
   const updateStep = (stepNum: number, patch: Partial<AgentStep>) => {
@@ -448,6 +448,8 @@ function GenerateContent() {
   // Replay the pre-built DEMO_PLAN step-by-step so a live demo never dies on a
   // cold backend or an exhausted Gemini quota. Same StepCards + animations as a
   // real run, just driven locally with a fixed pace and a DEMO watermark.
+  // Note: kept for future use; currently the backend cold-start fallback uses `goDemo()`.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const runDemoMode = async (myRun: number) => {
     setDemoMode(true)
     setDemoComplete(false)
@@ -459,6 +461,7 @@ function GenerateContent() {
     setShowGate(false)
     setPlanId(null)
     setUsedModel("")
+
     setSteps(
       DEMO_PLAN.steps.map(s => ({
         stepNumber: s.step,
@@ -794,12 +797,12 @@ function GenerateContent() {
                     </p>
                   </div>
                 )}
-                {(approvalData.top_competitors as Array<{name:string;weakness:string}> | undefined)?.length ? (
+                {(approvalData.top_competitors as Array<{ name: string; weakness: string }> | undefined)?.length ? (
                   <div className="rounded-xl p-4"
                     style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
                     <p className="text-xs mb-2 uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.25)" }}>Top Competitors</p>
                     <div className="space-y-1">
-                      {(approvalData.top_competitors as Array<{name:string;weakness:string}>).slice(0,3).map((c,i) => (
+                      {(approvalData.top_competitors as Array<{ name: string; weakness: string }>).slice(0, 3).map((c, i) => (
                         <div key={i} className="flex items-start gap-2 text-xs">
                           <span className="font-medium text-white flex-shrink-0">{c.name}</span>
                           <span style={{ color: "rgba(255,255,255,0.4)" }}>— {c.weakness}</span>
@@ -1077,8 +1080,8 @@ function GenerateContent() {
               const isGemini = selectedModel.startsWith("gemini")
               const provider = isGemini ? "Google AI Studio"
                 : selectedModel === "nvidia-llama" ? "NVIDIA NIM"
-                : selectedModel === "nvidia-nemotron" ? "NVIDIA (Nemotron)"
-                : "the InsForge / OpenRouter free pool"
+                  : selectedModel === "nvidia-nemotron" ? "NVIDIA (Nemotron)"
+                    : "the InsForge / OpenRouter free pool"
               const selectedDisplay = models.find(m => m.key === selectedModel)?.display ?? selectedModel
               return (
                 <div className="mt-4 rounded-2xl overflow-hidden"

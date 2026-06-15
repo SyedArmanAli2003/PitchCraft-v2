@@ -1,58 +1,56 @@
 "use client"
 import { useRouter } from "next/navigation"
+import { LogoMark } from "@/components/GradientLogo"
 
 const HOW_IT_WORKS = [
   {
     num: "01",
-    icon: "✍️",
     title: "Describe your idea",
     body: "One sentence is enough. What you're building, who it's for, and what problem it solves. That's it.",
   },
   {
     num: "02",
-    icon: "⚡",
     title: "Seven specialists collaborate",
     body: "A Strategy Analyst, Market Researcher, Customer Insights Specialist, Business Architect, Financial Modeller, Risk Officer, and Chief of Staff — working in sequence, handing off like a real team.",
   },
   {
     num: "03",
-    icon: "🚀",
     title: "Receive your full business plan",
     body: "Viability score, market sizing, personas, full strategy, 3-year financials, SWOT analysis. Cryptographically audited. Ready to share.",
   },
 ]
 
 const AGENTS = [
-  { num: 1, name: "Strategy Analyst",         role: "Validates idea viability, scores 1–10",     badge: "Gemini 3",          accent: "rgba(234,179,8,0.12)" },
-  { num: 2, name: "Market Intelligence",       role: "Market size, competitors, growth gaps",       badge: "InsForge + Gemini", accent: "rgba(16,185,129,0.10)" },
-  { num: 3, name: "Customer Insights",         role: "3 detailed customer personas",               badge: "Gemini 3",          accent: "rgba(234,179,8,0.12)" },
-  { num: 4, name: "Business Architect",        role: "Full plan + GTM strategy",                   badge: "Gemini 3",          accent: "rgba(234,179,8,0.12)" },
-  { num: 5, name: "Financial Modeller",        role: "3-year projections + break-even month",      badge: "InsForge + Gemini", accent: "rgba(16,185,129,0.10)" },
-  { num: 6, name: "Risk & Compliance",         role: "Risk matrix + full SWOT analysis",           badge: "Gemini 3",          accent: "rgba(234,179,8,0.12)" },
-  { num: 7, name: "Chief of Staff",            role: "Compiles, seals & saves to InsForge",        badge: "InsForge",          accent: "rgba(16,185,129,0.10)" },
+  { num: 1, name: "Strategy Analyst", role: "Validates idea viability, scores 1–10", badge: "Gemini 3", accent: "rgba(234,179,8,0.12)" },
+  { num: 2, name: "Market Intelligence", role: "Market size, competitors, growth gaps", badge: "InsForge + Gemini", accent: "rgba(16,185,129,0.10)" },
+  { num: 3, name: "Customer Insights", role: "3 detailed customer personas", badge: "Gemini 3", accent: "rgba(234,179,8,0.12)" },
+  { num: 4, name: "Business Architect", role: "Full plan + GTM strategy", badge: "Gemini 3", accent: "rgba(234,179,8,0.12)" },
+  { num: 5, name: "Financial Modeller", role: "3-year projections + break-even month", badge: "InsForge + Gemini", accent: "rgba(16,185,129,0.10)" },
+  { num: 6, name: "Risk & Compliance", role: "Risk matrix + full SWOT analysis", badge: "Gemini 3", accent: "rgba(234,179,8,0.12)" },
+  { num: 7, name: "Chief of Staff", role: "Compiles, seals & saves to InsForge", badge: "InsForge", accent: "rgba(16,185,129,0.10)" },
 ]
 
 const FEATURES = [
-  { icon: "⏸", title: "Human-in-the-loop review",  body: "After market research, the agent pauses. You review, steer the strategy, then approve before it continues." },
-  { icon: "◆", title: "InsForge grounded",          body: "Real industry data from InsForge Postgres feeds every market analysis. Plans are stored, auditable, and searchable." },
-  { icon: "🔴", title: "InsForge Realtime",          body: "A Postgres trigger broadcasts every step over WebSockets. Open a shared plan on a second device and watch it build live — no refresh." },
-  { icon: "🔒", title: "SHA-256 audit chain",        body: "Each generation step is hashed into a tamper-evident chain. The output is verifiable by anyone." },
-  { icon: "🔭", title: "Arize traced",               body: "Every Gemini call is traced to Arize Phoenix. Full observability — latency, tokens, model — for every plan." },
-  { icon: "⚡", title: "Multi-model cascade",        body: "Gemini 3 Flash → 3.5 Flash → 2.5 Flash, then a free InsForge Model Gateway fallback. Rotates keys on quota. Never crashes on one model's limits." },
-  { icon: "📤", title: "Share & export",             body: "Shareable URL + print-to-PDF in one click. Send your plan to investors in under 60 seconds." },
+  { title: "Human-in-the-loop review", body: "After market research, the agent pauses. You review, steer the strategy, then approve before it continues." },
+  { title: "InsForge grounded", body: "Real industry data from InsForge Postgres feeds every market analysis. Plans are stored, auditable, and searchable." },
+  { title: "InsForge Realtime", body: "A Postgres trigger broadcasts every step over WebSockets. Open a shared plan on a second device and watch it build live — no refresh." },
+  { title: "SHA-256 audit chain", body: "Each generation step is hashed into a tamper-evident chain. The output is verifiable by anyone." },
+  { title: "Arize traced", body: "Every Gemini call is traced to Arize Phoenix. Full observability — latency, tokens, model — for every plan." },
+  { title: "Multi-model cascade", body: "Gemini 3 Flash → 3.5 Flash → 2.5 Flash, then a free InsForge Model Gateway fallback. Rotates keys on quota. Never crashes on one model's limits." },
+  { title: "Share & export", body: "Shareable URL + print-to-PDF in one click. Send your plan to investors in under 60 seconds." },
 ]
 
 const FOOTER_PRODUCT = [
   ["Generate Plan", "/generate"],
-  ["How It Works",  "/#how-it-works"],
-  ["API Docs",      "https://github.com/SyedArmanAli2003/PitchCraft"],
+  ["How It Works", "/#how-it-works"],
+  ["API Docs", "https://github.com/SyedArmanAli2003/PitchCraft"],
 ] as const
 
 const FOOTER_BUILT_WITH = [
-  ["InsForge",              "https://insforge.dev"],
+  ["InsForge", "https://insforge.dev"],
   ["Google Cloud / Gemini", "https://cloud.google.com"],
-  ["Google ADK",            "https://cloud.google.com/vertex-ai/generative-ai/docs/agent-builder/overview"],
-  ["Arize Phoenix",         "https://phoenix.arize.com"],
+  ["Google ADK", "https://cloud.google.com/vertex-ai/generative-ai/docs/agent-builder/overview"],
+  ["Arize Phoenix", "https://phoenix.arize.com"],
 ] as const
 
 // ─── Section: How It Works ────────────────────────────────────────────────── //
@@ -89,10 +87,10 @@ export function HowItWorksSection() {
                 </span>
               )}
               <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center mb-5 text-xl"
+                className="w-12 h-12 rounded-xl flex items-center justify-center mb-5"
                 style={{ background: "rgba(124,58,237,0.12)", border: "1px solid rgba(124,58,237,0.2)" }}
               >
-                {s.icon}
+                <LogoMark size={20} />
               </div>
               <p className="text-xs font-bold mb-1" style={{ color: "hsl(258,85%,64%)" }}>{s.num}</p>
               <h3 className="text-white font-semibold text-lg mb-3">{s.title}</h3>
@@ -136,7 +134,7 @@ export function AgentsSection() {
           {AGENTS.map(agent => (
             <div
               key={agent.num}
-              className="rounded-2xl p-5 transition-all duration-200 hover:scale-[1.02]"
+              className="rounded-2xl p-5 transition-[transform,box-shadow,border-color] duration-300 ease-out hover:-translate-y-[2px]"
               style={{ background: "hsl(240,15%,8%)", border: "1px solid rgba(255,255,255,0.06)" }}
             >
               <div className="flex items-center gap-3 mb-3">
@@ -231,7 +229,7 @@ export function ExamplesSection() {
           {EXAMPLES.map(ex => (
             <div
               key={ex.idea}
-              className="rounded-2xl p-6 flex flex-col transition-all duration-200 hover:scale-[1.02]"
+              className="rounded-2xl p-6 flex flex-col transition-[transform,box-shadow,border-color] duration-300 ease-out hover:-translate-y-[2px]"
               style={{ background: "hsl(240,15%,8%)", border: "1px solid rgba(255,255,255,0.06)", borderTop: `2px solid ${ex.accent}` }}
             >
               <div className="flex items-center gap-2 mb-3 flex-wrap">
@@ -250,10 +248,8 @@ export function ExamplesSection() {
                 <span className="text-xs font-medium" style={{ color: "hsl(258,80%,78%)" }}>{ex.year3}</span>
                 <button
                   onClick={() => router.push(`/generate?idea=${encodeURIComponent(ex.fullIdea)}`)}
-                  className="text-xs font-semibold cursor-pointer transition-colors bg-transparent border-0 p-0"
+                  className="text-xs font-semibold cursor-pointer transition-colors bg-transparent border-0 p-0 hover:text-white"
                   style={{ color: "rgba(255,255,255,0.55)" }}
-                  onMouseEnter={e => (e.currentTarget.style.color = "white")}
-                  onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.55)")}
                 >
                   Generate this plan →
                 </button>
@@ -293,8 +289,10 @@ export function FeaturesSection() {
               className="rounded-2xl p-6 transition-all duration-200 hover:border-opacity-50"
               style={{ background: "hsl(240,15%,8%)", border: "1px solid rgba(255,255,255,0.06)" }}
             >
-              <p className="text-2xl mb-4">{f.icon}</p>
-              <p className="text-white font-semibold mb-2">{f.title}</p>
+              <div className="mb-4 flex items-center gap-3">
+                <LogoMark size={18} />
+                <p className="text-white font-semibold">{f.title}</p>
+              </div>
               <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.45)" }}>{f.body}</p>
             </div>
           ))}
@@ -321,7 +319,8 @@ export function CtaSection() {
             color: "hsl(258,80%,78%)",
           }}
         >
-          ✦ Free during the hackathon
+          <LogoMark size={14} />
+          Free during the hackathon
         </div>
         <h2
           className="font-bold mb-4 leading-tight"
@@ -336,16 +335,8 @@ export function CtaSection() {
         </p>
         <button
           onClick={() => router.push("/generate")}
-          className="py-4 px-12 rounded-xl font-semibold text-white text-sm cursor-pointer transition-all duration-200"
+          className="py-4 px-12 rounded-xl font-semibold text-white text-sm cursor-pointer transition-all duration-200 hover:-translate-y-[2px] hover:shadow-[0_0_45px_rgba(124,58,237,0.45)]"
           style={{ background: "hsl(258,85%,64%)" }}
-          onMouseEnter={e => {
-            e.currentTarget.style.boxShadow = "0 0 45px rgba(124,58,237,0.45)"
-            e.currentTarget.style.transform = "translateY(-2px)"
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.boxShadow = "none"
-            e.currentTarget.style.transform = "none"
-          }}
         >
           Generate My Plan — Free →
         </button>
@@ -366,7 +357,7 @@ export function FooterSection() {
         {/* Brand */}
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <span style={{ color: "hsl(258,90%,66%)", fontSize: "1.25rem" }}>✦</span>
+            <LogoMark size={18} />
             <span className="font-semibold text-white text-lg">
               Pitch<span style={{ color: "hsl(258,90%,66%)" }}>Craft</span>
             </span>
@@ -403,10 +394,8 @@ export function FooterSection() {
                 <a
                   key={label}
                   href={href}
-                  className="block text-xs no-underline transition-colors"
+                  className="block text-xs no-underline transition-colors duration-200 hover:text-white/80"
                   style={{ color: "rgba(255,255,255,0.42)" }}
-                  onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.75)")}
-                  onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.42)")}
                 >
                   {label}
                 </a>
@@ -424,10 +413,8 @@ export function FooterSection() {
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block text-xs no-underline transition-colors"
+                  className="block text-xs no-underline transition-colors duration-200 hover:text-white/80"
                   style={{ color: "rgba(255,255,255,0.42)" }}
-                  onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.75)")}
-                  onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.42)")}
                 >
                   {label}
                 </a>
@@ -447,12 +434,13 @@ export function FooterSection() {
         <p className="text-xs" style={{ color: "rgba(255,255,255,0.18)" }}>
           InsForge Launch Week 2 Hackathon 2026 · Realtime · Model Gateway · Auth · Postgres
         </p>
-        <a href="/admin"
-          className="text-xs mt-2 inline-block transition-colors"
+        <a
+          href="/admin"
+          className="text-xs mt-2 inline-flex items-center gap-2 transition-colors duration-200 hover:text-white/35"
           style={{ color: "rgba(255,255,255,0.1)" }}
-          onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.35)")}
-          onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.1)")}>
-          🛡 Admin
+        >
+          <LogoMark size={14} />
+          Admin
         </a>
       </div>
     </footer>
