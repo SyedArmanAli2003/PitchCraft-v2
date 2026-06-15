@@ -112,7 +112,7 @@ function InfoTooltip({ text }: { text: string }) {
   )
 }
 
-type Tab = "plan" | "deck" | "roadmap" | "tank" | "audit"
+type Tab = "plan" | "deck" | "roadmap" | "tank" | "coach" | "audit"
 
 // ── Investor Email Generator ─────────────────────────────────────────────────
 function InvestorEmailBox({ plan }: { plan: BusinessPlan }) {
@@ -656,6 +656,204 @@ function SharkTankTab({ plan }: { plan: BusinessPlan }) {
   )
 }
 
+// ── AI Pitch Coach Tab ───────────────────────────────────────────────────────
+type CoachAction = { action: string; why: string; priority: "High" | "Medium" | "Low" | string }
+type Coaching = {
+  elevator_pitch: string
+  clarity_score: number
+  clarity_reason?: string
+  strengths: string[]
+  weaknesses: string[]
+  next_actions: CoachAction[]
+  investor_questions: string[]
+  model_used?: string
+}
+
+function PitchCoachTab({ plan }: { plan: BusinessPlan }) {
+  const v = plan.validation
+  const m = plan.market_research
+  const b = plan.business_plan
+  const f = plan.financials
+  const [coaching, setCoaching] = useState<Coaching | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [pitchCopied, setPitchCopied] = useState(false)
+
+  const runCoach = async () => {
+    if (!v || !b) return
+    setLoading(true)
+    setError("")
+    const ctx = {
+      idea: plan.idea,
+      summary: v.one_line_summary,
+      viability_score: v.viability_score,
+      problem: b.problem,
+      solution: b.solution,
+      usp: b.unique_value_proposition,
+      market_size: m?.market_size,
+      growth_rate: m?.growth_rate,
+      revenue_model: b.revenue_model,
+      year1_revenue: f?.year1_revenue,
+      funding_needed: f?.funding_needed,
+    }
+    try {
+      const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://pitchcraft-api-4cecea40-48ff-439f-a853-2b9029124c34.fly.dev"
+      const res = await fetch(`${API_BASE}/api/pitch-coach`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan_context: ctx }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        setError(err.detail || "The pitch coach is busy — please try again in a moment.")
+        return
+      }
+      setCoaching(await res.json() as Coaching)
+    } catch {
+      setError("Couldn't reach the pitch coach. Check your connection and try again.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const priorityColor = (p: string) =>
+    p === "High" ? { c: "rgb(252,165,165)", bg: "rgba(239,68,68,0.12)", b: "rgba(239,68,68,0.3)" }
+    : p === "Medium" ? { c: "rgb(250,204,21)", bg: "rgba(234,179,8,0.12)", b: "rgba(234,179,8,0.3)" }
+    : { c: "rgb(74,222,128)", bg: "rgba(34,197,94,0.12)", b: "rgba(34,197,94,0.3)" }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="rounded-2xl p-6" style={{ background: "linear-gradient(135deg,rgba(124,58,237,0.14),rgba(59,130,246,0.08))", border: "1px solid rgba(124,58,237,0.3)" }}>
+        <div className="flex items-center gap-3 mb-2">
+          <span className="text-2xl">🎓</span>
+          <div>
+            <h2 className="text-lg font-bold text-white">AI Pitch Coach</h2>
+            <p className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>
+              Honest, actionable coaching to sharpen your pitch before you face investors.
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={runCoach}
+          disabled={loading || !v || !b}
+          className="w-full mt-3 py-3.5 rounded-xl font-bold text-sm cursor-pointer transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          style={{ background: "hsl(258,85%,64%)", color: "white", boxShadow: "0 0 24px rgba(124,58,237,0.3)" }}>
+          {loading ? "🤖 Coaching in progress (10-20s)…" : coaching ? "🔄 Re-run coaching" : "🎓 Coach my pitch"}
+        </button>
+      </div>
+
+      {/* Error */}
+      {error && !loading && (
+        <div className="rounded-2xl p-4 flex items-start gap-3"
+          style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)" }}>
+          <span className="text-lg">⚠️</span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold" style={{ color: "rgb(252,165,165)" }}>Coaching unavailable</p>
+            <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.55)" }}>{error}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Results */}
+      {coaching && !loading && (
+        <>
+          {/* Elevator pitch + clarity score */}
+          <div className="rounded-2xl p-6" style={{ background: "hsl(240,15%,8%)", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.35)" }}>🎤 Your 30-Second Elevator Pitch</p>
+              <button
+                onClick={() => { navigator.clipboard.writeText(coaching.elevator_pitch); setPitchCopied(true); setTimeout(() => setPitchCopied(false), 2000) }}
+                className="text-xs px-3 py-1.5 rounded-lg cursor-pointer"
+                style={{ background: "rgba(124,58,237,0.15)", color: "hsl(258,80%,78%)", border: "1px solid rgba(124,58,237,0.3)" }}>
+                {pitchCopied ? "✓ Copied!" : "Copy"}
+              </button>
+            </div>
+            <p className="text-base leading-relaxed text-white mb-4" style={{ fontStyle: "italic" }}>
+              &ldquo;{coaching.elevator_pitch}&rdquo;
+            </p>
+            <div className="flex items-center gap-3 pt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl font-bold" style={{ color: coaching.clarity_score >= 7 ? "rgb(74,222,128)" : coaching.clarity_score >= 5 ? "rgb(250,204,21)" : "rgb(252,165,165)" }}>
+                  {coaching.clarity_score}<span className="text-sm opacity-50">/10</span>
+                </span>
+                <span className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>Clarity</span>
+              </div>
+              {coaching.clarity_reason && (
+                <p className="text-xs flex-1" style={{ color: "rgba(255,255,255,0.5)" }}>{coaching.clarity_reason}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Strengths + weaknesses */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="rounded-2xl p-5" style={{ background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.2)" }}>
+              <p className="text-xs uppercase tracking-widest mb-3 font-semibold" style={{ color: "rgb(74,222,128)" }}>✓ Strengths</p>
+              <ul className="space-y-2">
+                {coaching.strengths?.map((s, i) => (
+                  <li key={i} className="text-sm flex items-start gap-2" style={{ color: "rgba(255,255,255,0.75)" }}>
+                    <span style={{ color: "rgb(74,222,128)" }}>·</span> {s}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="rounded-2xl p-5" style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)" }}>
+              <p className="text-xs uppercase tracking-widest mb-3 font-semibold" style={{ color: "rgb(252,165,165)" }}>⚠ Gaps to Fix</p>
+              <ul className="space-y-2">
+                {coaching.weaknesses?.map((s, i) => (
+                  <li key={i} className="text-sm flex items-start gap-2" style={{ color: "rgba(255,255,255,0.75)" }}>
+                    <span style={{ color: "rgb(252,165,165)" }}>·</span> {s}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* Next actions */}
+          <div className="rounded-2xl p-6" style={{ background: "hsl(240,15%,8%)", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <p className="text-xs uppercase tracking-widest mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>🎯 Prioritised Next Actions</p>
+            <div className="space-y-3">
+              {coaching.next_actions?.map((a, i) => {
+                const pc = priorityColor(a.priority)
+                return (
+                  <div key={i} className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <div className="flex items-start justify-between gap-3 mb-1">
+                      <p className="text-sm font-semibold text-white">{a.action}</p>
+                      <span className="text-xs px-2 py-0.5 rounded-full flex-shrink-0" style={{ background: pc.bg, color: pc.c, border: `1px solid ${pc.b}` }}>{a.priority}</span>
+                    </div>
+                    <p className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>{a.why}</p>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Investor questions */}
+          {coaching.investor_questions?.length > 0 && (
+            <div className="rounded-2xl p-6" style={{ background: "hsl(240,15%,8%)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <p className="text-xs uppercase tracking-widest mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>❓ Tough Questions To Prepare For</p>
+              <div className="space-y-2">
+                {coaching.investor_questions.map((q, i) => (
+                  <div key={i} className="flex items-start gap-3 py-1.5">
+                    <span className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold mt-0.5"
+                      style={{ background: "rgba(124,58,237,0.15)", color: "hsl(258,80%,78%)" }}>{i + 1}</span>
+                    <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>{q}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {coaching.model_used && (
+            <p className="text-center text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>
+              Coaching generated by {coaching.model_used}
+            </p>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
 export default function PlanDisplay({ plan: planProp }: { plan: BusinessPlan }) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<Tab>("plan")
@@ -774,8 +972,8 @@ export default function PlanDisplay({ plan: planProp }: { plan: BusinessPlan }) 
               )}
             </p>
             <h1 className="text-2xl font-bold text-white leading-snug">{plan.idea}</h1>
-            <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.35)" }}>
-              Generated {new Date(plan.created_at).toLocaleDateString("en-IN", { day:"numeric", month:"long", year:"numeric" })}
+            <p className="text-sm mt-1" suppressHydrationWarning style={{ color: "rgba(255,255,255,0.35)" }}>
+              Generated {new Date(plan.created_at).toLocaleDateString("en-IN", { day:"numeric", month:"long", year:"numeric", timeZone: "UTC" })}
             </p>
           </div>
           <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end">
@@ -800,6 +998,7 @@ export default function PlanDisplay({ plan: planProp }: { plan: BusinessPlan }) 
             { id: "deck",    label: "Pitch Deck",      icon: "🎯" },
             { id: "roadmap", label: "90-Day Plan",     icon: "🗺️" },
             { id: "tank",    label: "🦈 Shark Tank",    icon: "" },
+            { id: "coach",   label: "Pitch Coach",     icon: "🎓" },
             { id: "audit",   label: "Audit Trail",     icon: "🔒" },
           ] as { id: Tab; label: string; icon: string }[]).map(tab => (
             <button
@@ -1114,6 +1313,9 @@ export default function PlanDisplay({ plan: planProp }: { plan: BusinessPlan }) 
         {/* ── SHARK TANK TAB ── */}
         {activeTab === "tank" && <SharkTankTab plan={plan} />}
 
+        {/* ── AI PITCH COACH TAB ── */}
+        {activeTab === "coach" && <PitchCoachTab plan={plan} />}
+
         {/* ── AUDIT TRAIL TAB ── */}
         {activeTab === "audit" && (
           <div className="rounded-2xl"
@@ -1237,10 +1439,10 @@ export default function PlanDisplay({ plan: planProp }: { plan: BusinessPlan }) 
 
                               {/* Timestamp */}
                               {isPresent && (
-                                <span className="text-xs flex-shrink-0 tabular-nums"
+                                <span className="text-xs flex-shrink-0 tabular-nums" suppressHydrationWarning
                                   style={{ color: "rgba(255,255,255,0.3)" }}>
                                   {new Date(step.timestamp_utc).toLocaleTimeString("en", {
-                                    hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+                                    hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false, timeZone: "UTC",
                                   })}
                                 </span>
                               )}
@@ -1271,8 +1473,8 @@ export default function PlanDisplay({ plan: planProp }: { plan: BusinessPlan }) 
                       </button>
                     </div>
                     {auditChain.generated_at && (
-                      <p className="text-xs mt-2" style={{ color: "rgba(255,255,255,0.25)" }}>
-                        Chain sealed: {new Date(auditChain.generated_at).toLocaleString("en-IN")}
+                      <p className="text-xs mt-2" suppressHydrationWarning style={{ color: "rgba(255,255,255,0.25)" }}>
+                        Chain sealed: {new Date(auditChain.generated_at).toLocaleString("en-IN", { timeZone: "UTC" })}
                       </p>
                     )}
                   </div>

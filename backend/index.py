@@ -298,21 +298,62 @@ async def get_plans(user_id: str | None = None):
 
 
 # ---------------------------------------------------------------------------
-# Admin endpoints (requires ADMIN_SECRET env var)
+# Admin endpoints — email + password login (no OAuth for admin)
 # ---------------------------------------------------------------------------
+# Admin authenticates with email + password (POST /api/admin/login), which
+# returns a session token used as the X-Admin-Secret header on later calls.
+# Credentials come from env (ADMIN_EMAIL / ADMIN_PASSWORD); sensible defaults
+# let the dashboard work out of the box. CHANGE THESE in production.
+
+_DEFAULT_ADMIN_EMAIL = "admin@pitchcraft.app"
+_DEFAULT_ADMIN_PASSWORD = "PitchCraft@2026"
+
+
+def _admin_creds() -> tuple[str, str]:
+    """The configured admin (email, password), falling back to defaults."""
+    email = (os.getenv("ADMIN_EMAIL") or _DEFAULT_ADMIN_EMAIL).strip().lower()
+    password = (os.getenv("ADMIN_PASSWORD") or _DEFAULT_ADMIN_PASSWORD).strip()
+    return email, password
+
+
+def _admin_token() -> str:
+    """The token that grants admin access. Uses ADMIN_SECRET if set; otherwise
+    a stable token derived from the admin credentials so login still works."""
+    explicit = os.getenv("ADMIN_SECRET", "").strip()
+    if explicit:
+        return explicit
+    import hashlib
+    email, password = _admin_creds()
+    return "adm_" + hashlib.sha256(f"{email}:{password}".encode("utf-8")).hexdigest()[:40]
+
 
 def _check_admin(request: Request) -> None:
-    """Raise 401/403 if the request doesn't carry a valid admin secret."""
-    secret = os.getenv("ADMIN_SECRET", "").strip()
-    if not secret:
-        raise HTTPException(status_code=503, detail="Admin access not configured (set ADMIN_SECRET env var)")
+    """Raise 401 if the request doesn't carry a valid admin session token."""
     token = (
         request.headers.get("X-Admin-Secret")
         or request.query_params.get("secret")
         or ""
     )
-    if token != secret:
-        raise HTTPException(status_code=401, detail="Invalid admin secret")
+    if not token or token != _admin_token():
+        raise HTTPException(status_code=401, detail="Unauthorized — admin login required")
+
+
+@app.post("/api/admin/login")
+async def admin_login(request: Request):
+    """Validate admin email + password; return a session token on success.
+    Uses a constant-time comparison to avoid leaking timing information."""
+    import secrets as _secrets
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid request body")
+    email = str(body.get("email", "")).strip().lower()
+    password = str(body.get("password", ""))
+    exp_email, exp_password = _admin_creds()
+    ok = _secrets.compare_digest(email, exp_email) and _secrets.compare_digest(password, exp_password)
+    if not ok:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    return {"token": _admin_token(), "email": exp_email}
 
 
 @app.get("/api/admin/stats")
@@ -458,11 +499,91 @@ Return ONLY valid JSON:
 
     from agent import _generate
     try:
-        result, _ = await _generate(prompt, "gemini-3.5-flash", keys)
+        result, _ = await _generate(prompt, "nvidia-nemotron", keys)
         reactions = result.get("reactions", [])
         if not reactions or len(reactions) < 3:
             raise ValueError("Incomplete reactions")
         return {"reactions": reactions}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# AI Pitch Coach endpoint
+# ---------------------------------------------------------------------------
+# Distinct from Shark Tank (which simulates investor *reactions*). The Pitch
+# Coach acts as a founder's advisor: it rewrites a tight elevator pitch, scores
+# pitch clarity, and gives concrete, prioritised next actions plus the tough
+# questions investors will likely ask — so the founder can prepare.
+
+class PitchCoachRequest(BaseModel):
+    plan_context: dict
+    model: str | None = None
+
+
+@app.post("/api/pitch-coach")
+async def pitch_coach(req: PitchCoachRequest):
+    """AI Pitch Coach — actionable founder feedback from the free model cascade."""
+    try:
+        keys = _load_api_keys()
+    except Exception:
+        keys = []
+
+    ctx = req.plan_context
+    prompt = f"""You are an experienced startup pitch coach and former VC. Coach this founder
+honestly and concretely. Be specific to THIS business — reference its real numbers and details.
+
+BUSINESS PLAN:
+Idea: {ctx.get('idea', 'N/A')}
+One-line summary: {ctx.get('summary', 'N/A')}
+Problem: {ctx.get('problem', 'N/A')}
+Solution: {ctx.get('solution', 'N/A')}
+Unique value: {ctx.get('usp', 'N/A')}
+Market size: {ctx.get('market_size', 'N/A')} growing at {ctx.get('growth_rate', 'N/A')}
+Revenue model: {ctx.get('revenue_model', 'N/A')}
+Year 1 revenue target: {ctx.get('year1_revenue', 'N/A')}
+Funding ask: {ctx.get('funding_needed', 'N/A')}
+Viability score: {ctx.get('viability_score', 'N/A')}/10
+
+Coach the founder. Return ONLY valid JSON in EXACTLY this shape:
+{{
+  "elevator_pitch": "A tight, compelling 2-3 sentence elevator pitch rewrite they can say in 30 seconds.",
+  "clarity_score": 7,
+  "clarity_reason": "One sentence on why the pitch scores this on clarity/persuasiveness (1-10).",
+  "strengths": ["2-4 specific strengths investors will respond to"],
+  "weaknesses": ["2-4 specific gaps or red flags to fix before pitching"],
+  "next_actions": [
+    {{"action": "Concrete next step", "why": "Why it matters", "priority": "High"}}
+  ],
+  "investor_questions": ["3-5 tough questions investors are likely to ask, specific to this business"]
+}}
+
+Rules: be concrete and reference this business's actual details/numbers. priority must be one of High/Medium/Low.
+Keep each list item to one or two sentences."""
+
+    from agent import _generate
+    # Default to NVIDIA Nemotron — a reliable, fast, free JSON producer. Gemini
+    # free-tier quota is easily exhausted, and the smaller gateway fallbacks
+    # mangle this structured prompt; Nemotron handles it consistently.
+    model_key = req.model or "nvidia-nemotron"
+    try:
+        result, used = await _generate(prompt, model_key, keys)
+        if not isinstance(result, dict) or not result.get("elevator_pitch"):
+            raise ValueError("Coach did not return a usable pitch")
+        # Normalise so the UI always has the expected shape, even if a fallback
+        # model omitted a field. We never fabricate content — missing lists are
+        # simply empty rather than invented.
+        normalised = {
+            "elevator_pitch": str(result.get("elevator_pitch", "")),
+            "clarity_score": result.get("clarity_score", 0),
+            "clarity_reason": result.get("clarity_reason", ""),
+            "strengths": result.get("strengths") or [],
+            "weaknesses": result.get("weaknesses") or [],
+            "next_actions": result.get("next_actions") or [],
+            "investor_questions": result.get("investor_questions") or [],
+            "model_used": used,
+        }
+        return normalised
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -232,6 +232,18 @@ function LoginContent() {
         <p className="text-center text-xs mt-6" style={{ color: "rgba(255,255,255,0.18)" }}>
           Powered by InsForge · Launch Week 2 Hackathon 2026
         </p>
+
+        {/* Admin access — email + password, separate from user login */}
+        <p className="text-center text-xs mt-3">
+          <a
+            href="/admin"
+            className="no-underline transition-colors"
+            style={{ color: "rgba(255,255,255,0.28)" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "hsl(258,80%,72%)")}
+            onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.28)")}>
+            🛡️ Admin access
+          </a>
+        </p>
       </div>
     </div>
   )
