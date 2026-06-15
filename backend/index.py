@@ -429,6 +429,12 @@ async def mcp_call(req: dict):
 class SharkTankRequest(BaseModel):
     plan_context: dict
     sharks: list[dict]
+    qa_context: dict | None = None  # {"shark_name": ["answer1", "answer2", ...], ...}
+
+
+class SharkQuestionsRequest(BaseModel):
+    plan_context: dict
+    sharks: list[dict]
 
 
 @app.post("/api/shark-tank")
@@ -444,6 +450,17 @@ async def shark_tank_sim(req: SharkTankRequest):
     valuation = ctx.get('implied_valuation', 'N/A')
     score = ctx.get('viability_score', 7)
 
+    # Build Q&A context section if provided
+    qa_section = ""
+    if req.qa_context:
+        qa_lines = ["PRE-PITCH Q&A (founder answered each shark's questions):"]
+        for shark_name, answers in req.qa_context.items():
+            if answers:
+                qa_lines.append(f"\n{shark_name} asked:")
+                for i, ans in enumerate(answers, 1):
+                    qa_lines.append(f"  Q{i}: {ans}")
+        qa_section = "\n".join(qa_lines) + "\n"
+
     prompt = f"""You are directing a Shark Tank / Dragons Den pitch session. Give realistic, specific reactions with genuine investor logic.
 
 STARTUP PITCH:
@@ -458,7 +475,7 @@ Year 1 Revenue Target: {ctx.get('year1_revenue', 'N/A')}
 The Ask: {ask_str}
 Implied Valuation: {valuation}
 
-SHARKS (5 investors, each with distinct personality):
+{qa_section}SHARKS (5 investors, each with distinct personality):
 {chr(10).join(f"{i+1}. {s['name']} ({s['style']}): {s['trait']}" for i, s in enumerate(req.sharks))}
 
 Rules for generating realistic reactions:
@@ -504,6 +521,63 @@ Return ONLY valid JSON:
         if not reactions or len(reactions) < 3:
             raise ValueError("Incomplete reactions")
         return {"reactions": reactions}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/shark-tank/questions")
+async def shark_tank_questions(req: SharkQuestionsRequest):
+    """Generate clarifying questions from each shark based on the business plan.
+    This is the pre-pitch Q&A phase where sharks dig into specifics before committing."""
+    try:
+        keys = _load_api_keys()
+    except Exception:
+        keys = []
+
+    ctx = req.plan_context
+    ask_str = ctx.get('funding_needed', '$250,000 for 10% equity')
+    valuation = ctx.get('implied_valuation', 'N/A')
+    score = ctx.get('viability_score', 7)
+
+    prompt = f"""You are 5 Shark Tank investors preparing for a pitch. Each shark writes 2-3 sharp, specific questions they NEED answered before they'd consider investing. Questions must be in character and reference actual numbers/details from the plan.
+
+STARTUP PITCH:
+Idea: {ctx.get('idea', 'N/A')}
+Problem: {ctx.get('problem', 'N/A')}
+Solution: {ctx.get('solution', 'N/A')}
+USP: {ctx.get('usp', 'N/A')}
+Viability Score: {score}/10
+Market Size: {ctx.get('market_size', 'N/A')} growing at {ctx.get('growth_rate', 'N/A')}
+Revenue Model: {ctx.get('revenue_model', 'N/A')}
+Year 1 Revenue Target: {ctx.get('year1_revenue', 'N/A')}
+The Ask: {ask_str}
+Implied Valuation: {valuation}
+
+SHARKS (5 investors, each with distinct personality):
+{chr(10).join(f"{i+1}. {s['name']} ({s['style']}): {s['trait']}" for i, s in enumerate(req.sharks))}
+
+Each shark writes 2-3 questions tailored to their focus:
+- Mark C. (tough): Traction, unit economics, CAC/LTV, churn, real revenue proof
+- Sarah K. (strategic): Moat, defensibility, brand, network effects, 10-year vision
+- Raj P. (tech): AI differentiation, scalability, technical moat, IP, architecture
+- Lisa T. (empathetic): Founder story, mission, team, culture, social impact, customer love
+- Carlos M. (operational): Margins, supply chain, ops efficiency, burn, path to profitability
+
+Return ONLY valid JSON:
+{{
+  "questions": [
+    {{"shark": "exact shark name", "questions": ["question 1", "question 2", "question 3"]}},
+    ...
+  ]
+}}"""
+
+    from agent import _generate
+    try:
+        result, _ = await _generate(prompt, "nvidia-nemotron", keys)
+        questions = result.get("questions", [])
+        if not questions or len(questions) < 3:
+            raise ValueError("Incomplete questions")
+        return {"questions": questions}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

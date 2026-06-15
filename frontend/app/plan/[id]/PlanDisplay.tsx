@@ -370,6 +370,7 @@ const SHARKS = [
 ]
 
 type Reaction = { shark: string; verdict: "IN" | "OUT" | "COUNTER"; comment: string; counter_offer?: string }
+type SharkQuestions = { shark: string; questions: string[] }
 
 function SharkTankTab({ plan }: { plan: BusinessPlan }) {
   const v = plan.validation
@@ -379,74 +380,128 @@ function SharkTankTab({ plan }: { plan: BusinessPlan }) {
 
   const [askAmount, setAskAmount] = useState(f?.funding_needed?.replace(/[^0-9]/g, "") || "250000")
   const [equityPct, setEquityPct] = useState("10")
+  const [questions, setQuestions] = useState<SharkQuestions[]>([])
+  const [answers, setAnswers] = useState<Record<string, string>>({})
   const [reactions, setReactions] = useState<Reaction[]>([])
   const [loading, setLoading] = useState(false)
-  const [pitched, setPitched] = useState(false)
+  const [phase, setPhase] = useState<"ask" | "qa" | "verdict" | "done">("ask")
   const [sharkError, setSharkError] = useState("")
 
   const impliedValuation = askAmount && equityPct
     ? `$${(parseFloat(askAmount) / (parseFloat(equityPct) / 100) / 1_000_000).toFixed(2)}M`
     : "?"
 
-  const runSimulation = async () => {
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://pitchcraft-api-4cecea40-48ff-439f-a853-2b9029124c34.fly.dev"
+  const buildCtx = () => ({
+    idea: plan.idea,
+    viability_score: v?.viability_score,
+    summary: v?.one_line_summary,
+    problem: b?.problem,
+    solution: b?.solution,
+    usp: b?.unique_value_proposition,
+    market_size: m?.market_size,
+    growth_rate: m?.growth_rate,
+    revenue_model: b?.revenue_model,
+    year1_revenue: f?.year1_revenue,
+    funding_needed: `$${Number(askAmount).toLocaleString()} for ${equityPct}% equity`,
+    implied_valuation: impliedValuation,
+  })
+
+  const sharksPayload = () => SHARKS.map(s => ({ name: s.name, style: s.style, trait: s.trait }))
+
+  const startQa = async () => {
     if (!v || !b) return
     setLoading(true)
-    setPitched(false)
     setSharkError("")
-    // Build the real pitch context for the AI sharks
-    const ctx = {
-      idea: plan.idea,
-      viability_score: v.viability_score,
-      summary: v.one_line_summary,
-      problem: b.problem,
-      solution: b.solution,
-      usp: b.unique_value_proposition,
-      market_size: m?.market_size,
-      growth_rate: m?.growth_rate,
-      revenue_model: b.revenue_model,
-      year1_revenue: f?.year1_revenue,
-      funding_needed: `$${Number(askAmount).toLocaleString()} for ${equityPct}% equity`,
-      implied_valuation: impliedValuation,
-    }
-    // Real AI reactions only — no fabricated fallback.
     try {
-      const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://pitchcraft-api-4cecea40-48ff-439f-a853-2b9029124c34.fly.dev"
+      const res = await fetch(`${API_BASE}/api/shark-tank/questions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan_context: buildCtx(), sharks: sharksPayload() }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const list = (data.questions || []) as SharkQuestions[]
+        if (list.length < 3) throw new Error("Incomplete questions")
+        setQuestions(list)
+        setPhase("qa")
+      } else {
+        const err = await res.json().catch(() => ({}))
+        setSharkError(err.detail || "The AI sharks couldn't prepare questions. Try again.")
+      }
+    } catch {
+      setSharkError("Couldn't reach the AI sharks. Check your connection.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const submitAnswers = async () => {
+    if (!v || !b) return
+    setLoading(true)
+    setSharkError("")
+    setPhase("verdict")
+    // Group answers by shark
+    const qaContext: Record<string, string[]> = {}
+    for (const q of questions) {
+      qaContext[q.shark] = q.questions.map(qq => answers[`${q.shark}:${qq}`] || "(skipped)")
+    }
+    try {
       const res = await fetch(`${API_BASE}/api/shark-tank`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan_context: ctx, sharks: SHARKS.map(s => ({ name: s.name, style: s.style, trait: s.trait })) }),
+        body: JSON.stringify({
+          plan_context: buildCtx(),
+          sharks: sharksPayload(),
+          qa_context: qaContext,
+        }),
       })
       if (res.ok) {
         const data = await res.json()
         const list = (data.reactions || []) as Reaction[]
         if (!list.length) throw new Error("No reactions returned")
         setReactions(list)
-        setPitched(true)
+        setPhase("done")
       } else {
         const err = await res.json().catch(() => ({}))
-        setSharkError(err.detail || "The AI sharks are busy right now — please pitch again in a moment.")
+        setSharkError(err.detail || "The AI sharks are deliberating — pitch again.")
+        setPhase("qa")
       }
     } catch {
-      setSharkError("Couldn't reach the AI sharks. Check your connection and pitch again.")
+      setSharkError("Couldn't reach the AI sharks. Check your connection.")
+      setPhase("qa")
     } finally {
       setLoading(false)
     }
   }
-  const inCount      = reactions.filter(r => r.verdict === "IN").length
+
+  const resetAll = () => {
+    setQuestions([])
+    setAnswers({})
+    setReactions([])
+    setPhase("ask")
+    setSharkError("")
+  }
+
+  const inCount = reactions.filter(r => r.verdict === "IN").length
   const counterCount = reactions.filter(r => r.verdict === "COUNTER").length
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header - always visible */}
       <div className="rounded-2xl p-6" style={{ background: "linear-gradient(135deg,rgba(234,179,8,0.12),rgba(239,68,68,0.08))", border: "1px solid rgba(234,179,8,0.3)" }}>
         <div className="flex items-center gap-3 mb-3">
           <span className="text-2xl">🦈</span>
           <div>
             <h2 className="text-lg font-bold text-white">Shark Tank Simulator</h2>
-            <p className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>AI-powered investor reactions based on your actual business plan.</p>
+            <p className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>
+              {phase === "ask" ? "Set your ask, then prepare for a pre-pitch Q&A with the sharks." :
+               phase === "qa" ? "The sharks have questions. Answer them before they decide." :
+               phase === "verdict" ? "Sharks are deliberating based on your answers..." :
+               "Final verdicts are in."}
+            </p>
           </div>
         </div>
-        {/* Pre-pitch checklist */}
         {v && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
             {[
@@ -467,59 +522,123 @@ function SharkTankTab({ plan }: { plan: BusinessPlan }) {
         )}
       </div>
 
-      {/* Pitch Setup */}
-      <div className="rounded-2xl p-6" style={{ background: "hsl(240,15%,8%)", border: "1px solid rgba(255,255,255,0.06)" }}>
-        <p className="text-xs uppercase tracking-widest mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>Your Ask</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-          <div>
-            <p className="text-xs mb-1.5" style={{ color: "rgba(255,255,255,0.4)" }}>Investment Ask ($)</p>
-            <input
-              type="number" value={askAmount} onChange={e => setAskAmount(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl text-white text-sm outline-none"
-              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", caretColor: "rgb(250,204,21)" }}
-              placeholder="250000"
-            />
-          </div>
-          <div>
-            <p className="text-xs mb-1.5" style={{ color: "rgba(255,255,255,0.4)" }}>Equity Offered (%)</p>
-            <input
-              type="number" value={equityPct} onChange={e => setEquityPct(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl text-white text-sm outline-none"
-              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", caretColor: "rgb(250,204,21)" }}
-              placeholder="10"
-            />
-          </div>
-          <div>
-            <p className="text-xs mb-1.5" style={{ color: "rgba(255,255,255,0.4)" }}>Implied Valuation</p>
-            <div className="px-3 py-2.5 rounded-xl text-sm font-bold" style={{ background: "rgba(234,179,8,0.1)", border: "1px solid rgba(234,179,8,0.25)", color: "rgb(250,204,21)" }}>
-              {impliedValuation}
+      {/* Phase 1: Ask + Step Into Tank */}
+      {phase === "ask" && (
+        <div className="rounded-2xl p-6" style={{ background: "hsl(240,15%,8%)", border: "1px solid rgba(255,255,255,0.06)" }}>
+          <p className="text-xs uppercase tracking-widest mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>Your Ask</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+            <div>
+              <p className="text-xs mb-1.5" style={{ color: "rgba(255,255,255,0.4)" }}>Investment Ask ($)</p>
+              <input
+                type="number" value={askAmount} onChange={e => setAskAmount(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl text-white text-sm outline-none"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", caretColor: "rgb(250,204,21)" }}
+                placeholder="250000"
+              />
+            </div>
+            <div>
+              <p className="text-xs mb-1.5" style={{ color: "rgba(255,255,255,0.4)" }}>Equity Offered (%)</p>
+              <input
+                type="number" value={equityPct} onChange={e => setEquityPct(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl text-white text-sm outline-none"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", caretColor: "rgb(250,204,21)" }}
+                placeholder="10"
+              />
+            </div>
+            <div>
+              <p className="text-xs mb-1.5" style={{ color: "rgba(255,255,255,0.4)" }}>Implied Valuation</p>
+              <div className="px-3 py-2.5 rounded-xl text-sm font-bold" style={{ background: "rgba(234,179,8,0.1)", border: "1px solid rgba(234,179,8,0.25)", color: "rgb(250,204,21)" }}>
+                {impliedValuation}
+              </div>
             </div>
           </div>
+          <button
+            onClick={startQa}
+            disabled={loading || !v || !b}
+            className="w-full py-3.5 rounded-xl font-bold text-sm cursor-pointer transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ background: "linear-gradient(135deg,rgba(239,68,68,0.9),rgba(234,179,8,0.8))", color: "white", boxShadow: "0 0 24px rgba(239,68,68,0.3)" }}
+          >
+            {loading ? "🧠 Sharks are preparing questions..." : "🎙 Step Into the Tank"}
+          </button>
         </div>
-        <button
-          onClick={runSimulation}
-          disabled={loading || !v || !b}
-          className="w-full py-3.5 rounded-xl font-bold text-sm cursor-pointer transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-          style={{ background: "linear-gradient(135deg,rgba(239,68,68,0.9),rgba(234,179,8,0.8))", color: "white", boxShadow: "0 0 24px rgba(239,68,68,0.3)" }}
-        >
-          {loading ? "🤖 AI sharks are deliberating (15-30s)..." : pitched ? "🔄 Pitch Again" : "🎙 Step Into the Tank"}
-        </button>
-      </div>
+      )}
 
-      {/* Error (genuine — no fabricated reactions) */}
+      {/* Phase 2: Q&A - each shark asks questions */}
+      {phase === "qa" && (
+        <div className="space-y-4">
+          <div className="rounded-2xl p-4" style={{ background: "rgba(234,179,8,0.06)", border: "1px solid rgba(234,179,8,0.2)" }}>
+            <p className="text-xs font-semibold" style={{ color: "rgb(250,204,21)" }}>
+              💬 Pre-Pitch Q&A — The sharks want answers before committing
+            </p>
+            <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>
+              Answer each shark's questions honestly. Your answers will influence their final verdict.
+            </p>
+          </div>
+          {questions.map((qGroup, gi) => {
+            const shark = SHARKS.find(s => s.name === qGroup.shark) || SHARKS[gi]
+            return (
+              <div key={gi} className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${shark.color}33` }}>
+                <div className="px-5 py-3 flex items-center gap-3" style={{ background: shark.bg }}>
+                  <span className="text-xl">{shark.icon}</span>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-white">{qGroup.shark}</p>
+                    <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>{shark.trait}</p>
+                  </div>
+                </div>
+                <div className="px-5 py-4 space-y-4" style={{ background: "rgba(255,255,255,0.01)" }}>
+                  {qGroup.questions.map((qq, qi) => (
+                    <div key={qi}>
+                      <p className="text-sm font-medium mb-2" style={{ color: shark.color }}>
+                        ❝{qq}❞
+                      </p>
+                      <textarea
+                        value={answers[`${qGroup.shark}:${qq}`] || ""}
+                        onChange={e => setAnswers(prev => ({ ...prev, [`${qGroup.shark}:${qq}`]: e.target.value }))}
+                        className="w-full rounded-xl px-3 py-2 text-sm outline-none resize-none"
+                        rows={2}
+                        placeholder="Your answer..."
+                        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.85)" }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+          <button
+            onClick={submitAnswers}
+            disabled={loading}
+            className="w-full py-3.5 rounded-xl font-bold text-sm cursor-pointer transition-all disabled:opacity-40"
+            style={{ background: "linear-gradient(135deg,rgba(124,58,237,0.9),rgba(59,130,246,0.8))", color: "white", boxShadow: "0 0 24px rgba(124,58,237,0.3)" }}
+          >
+            {loading ? "🤖 AI sharks are deliberating..." : "📊 Submit Answers & Get Verdict"}
+          </button>
+        </div>
+      )}
+
+      {/* Loading during verdict phase */}
+      {phase === "verdict" && loading && (
+        <div className="rounded-2xl p-8 flex flex-col items-center gap-4" style={{ background: "hsl(240,15%,8%)", border: "1px solid rgba(255,255,255,0.06)" }}>
+          <span className="text-4xl">🦈🤔</span>
+          <p className="text-sm font-semibold text-white">Sharks are reviewing your answers and business plan...</p>
+          <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>This takes 15-30 seconds</p>
+        </div>
+      )}
+
+      {/* Error */}
       {sharkError && !loading && (
         <div className="rounded-2xl p-4 flex items-start gap-3"
           style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)" }}>
           <span className="text-lg">⚠️</span>
           <div className="flex-1">
-            <p className="text-sm font-semibold" style={{ color: "rgb(252,165,165)" }}>Couldn&apos;t run the pitch</p>
+            <p className="text-sm font-semibold" style={{ color: "rgb(252,165,165)" }}>Shark Tank Error</p>
             <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.55)" }}>{sharkError}</p>
           </div>
         </div>
       )}
 
-      {/* Results */}
-      {pitched && reactions.length > 0 && (
+      {/* Phase 3: Results / Verdicts */}
+      {(phase === "done" && reactions.length > 0) && (
         <>
           {/* Summary */}
           <div className="rounded-2xl p-5 flex items-center gap-5" style={{ background: "hsl(240,15%,8%)", border: "1px solid rgba(255,255,255,0.06)" }}>
@@ -558,9 +677,7 @@ function SharkTankTab({ plan }: { plan: BusinessPlan }) {
                       <p className="text-sm font-bold text-white">{reaction.shark}</p>
                       <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>{shark.trait}</p>
                     </div>
-                    <span className={`text-xs font-bold px-3 py-1 rounded-full ${
-                      reaction.verdict === "IN" ? "" : reaction.verdict === "COUNTER" ? "" : ""
-                    }`} style={{
+                    <span className="text-xs font-bold px-3 py-1 rounded-full" style={{
                       background: reaction.verdict === "IN" ? "rgba(34,197,94,0.2)" : reaction.verdict === "COUNTER" ? "rgba(234,179,8,0.2)" : "rgba(239,68,68,0.2)",
                       color: reaction.verdict === "IN" ? "rgb(74,222,128)" : reaction.verdict === "COUNTER" ? "rgb(250,204,21)" : "rgb(252,165,165)",
                     }}>
@@ -578,6 +695,28 @@ function SharkTankTab({ plan }: { plan: BusinessPlan }) {
                       </div>
                     )}
                   </div>
+                  {/* Show Q&A reference for this shark */}
+                  {(() => {
+                    const q = questions.find(qg => qg.shark === reaction.shark)
+                    if (!q) return null
+                    return (
+                      <details className="px-5 py-2" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                        <summary className="text-xs cursor-pointer" style={{ color: "rgba(255,255,255,0.35)" }}>
+                          📋 Review what you answered
+                        </summary>
+                        <div className="mt-2 space-y-1.5">
+                          {q.questions.map((qq, qi) => (
+                            <div key={qi}>
+                              <p className="text-xs" style={{ color: shark.color }}>Q: {qq}</p>
+                              <p className="text-xs ml-2" style={{ color: "rgba(255,255,255,0.5)" }}>
+                                A: {answers[`${q.shark}:${qq}`] || "(skipped)"}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    )
+                  })()}
                 </div>
               )
             })}
@@ -585,9 +724,18 @@ function SharkTankTab({ plan }: { plan: BusinessPlan }) {
 
           {/* Negotiation Action Plan */}
           <div className="rounded-2xl p-6" style={{ background: "hsl(240,15%,8%)", border: "1px solid rgba(255,255,255,0.06)" }}>
-            <p className="text-xs uppercase tracking-widest mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>
-              📋 Negotiation Action Plan
-            </p>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-xs uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.35)" }}>
+                📋 Negotiation Action Plan
+              </p>
+              <button
+                onClick={resetAll}
+                className="text-xs px-3 py-1.5 rounded-lg cursor-pointer"
+                style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.08)" }}
+              >
+                🔄 Pitch Again
+              </button>
+            </div>
             {inCount + counterCount >= 3 ? (
               <div className="space-y-3">
                 <p className="text-sm font-semibold" style={{ color: "rgb(74,222,128)" }}>You likely have a deal. Here&apos;s how to close it:</p>
