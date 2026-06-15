@@ -1134,6 +1134,133 @@ export default function PlanDisplay({ plan: planProp }: { plan: BusinessPlan }) 
     setTimeout(() => setHashCopied(false), 2000)
   }
 
+  // ── Full business-plan PDF export ──────────────────────────────────────────
+  // window.print() alone only captures the active tab inside the dark app shell.
+  // Instead we render the ENTIRE plan into a clean, print-formatted document in a
+  // new window and trigger its print dialog → a proper multi-page PDF with every
+  // section (validation, market, personas, plan, financials, risks, audit hash).
+  const handleDownloadPdf = () => {
+    const esc = (s: unknown) =>
+      String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    const list = (items?: unknown[]) =>
+      (items && items.length)
+        ? `<ul>${items.map(i => `<li>${esc(i)}</li>`).join("")}</ul>`
+        : `<p class="muted">—</p>`
+    const generated = new Date(plan.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
+
+    const sections: string[] = []
+    if (v) sections.push(`
+      <section><h2>1 · Validation</h2>
+        <p class="score">${esc(v.viability_score)}<span>/10 viability</span></p>
+        <p class="lead">${esc(v.one_line_summary)}</p>
+        <p><strong>Core problem:</strong> ${esc(v.core_problem_solved)}</p>
+        <p><strong>Target market:</strong> ${esc(v.target_market)}</p>
+        <p><strong>Key concerns:</strong></p>${list(v.main_concerns)}
+      </section>`)
+    if (m) sections.push(`
+      <section><h2>2 · Market Research</h2>
+        <div class="grid2">
+          <div class="box"><span class="lbl">Market size</span><strong>${esc(m.market_size)}</strong></div>
+          <div class="box"><span class="lbl">Growth rate</span><strong>${esc(m.growth_rate)}</strong></div>
+        </div>
+        <p><strong>Market gap:</strong> ${esc(m.market_gap)}</p>
+        ${(m.top_competitors && m.top_competitors.length) ? `<table><thead><tr><th>Competitor</th><th>Weakness</th></tr></thead><tbody>${m.top_competitors.map(c => `<tr><td>${esc(c.name)}</td><td>${esc(c.weakness)}</td></tr>`).join("")}</tbody></table>` : ""}
+      </section>`)
+    if (plan.personas && plan.personas.length) sections.push(`
+      <section><h2>3 · Customer Personas</h2>
+        ${plan.personas.map(p => `
+          <div class="persona">
+            <strong>${esc(p.name)}</strong> <span class="muted">${esc(p.job)}${p.age ? " · " + esc(p.age) : ""}${p.location ? " · " + esc(p.location) : ""}</span>
+            <p>"${esc(p.pain_point)}"</p>
+            <p class="muted">Willing to pay: ${esc(p.willingness_to_pay)}${p.how_they_find_us ? " · Found via: " + esc(p.how_they_find_us) : ""}</p>
+          </div>`).join("")}
+      </section>`)
+    if (b) sections.push(`
+      <section><h2>4 · Business Plan</h2>
+        <p><strong>Problem:</strong> ${esc(b.problem)}</p>
+        <p><strong>Solution:</strong> ${esc(b.solution)}</p>
+        <p><strong>Unique value:</strong> ${esc(b.unique_value_proposition)}</p>
+        <p><strong>Revenue model:</strong> ${esc(b.revenue_model)}</p>
+        ${(b.revenue_streams && b.revenue_streams.length) ? `<p><strong>Revenue streams:</strong></p>${list(b.revenue_streams)}` : ""}
+        <p><strong>Go-to-market:</strong> ${esc(b.go_to_market)}</p>
+      </section>`)
+    if (f) sections.push(`
+      <section><h2>5 · Financial Projections</h2>
+        <table><tbody>
+          <tr><td>Year 1 revenue</td><td>${esc(f.year1_revenue)}</td></tr>
+          <tr><td>Year 2 revenue</td><td>${esc(f.year2_revenue)}</td></tr>
+          <tr><td>Year 3 revenue</td><td>${esc(f.year3_revenue)}</td></tr>
+          <tr><td>Startup cost</td><td>${esc(f.startup_cost)}</td></tr>
+          <tr><td>Monthly burn</td><td>${esc(f.monthly_burn)}</td></tr>
+          <tr><td>Break-even</td><td>Month ${esc(f.break_even_month)}</td></tr>
+          <tr><td>Funding needed</td><td>${esc(f.funding_needed)}</td></tr>
+        </tbody></table>
+      </section>`)
+    if (r) sections.push(`
+      <section><h2>6 · Risk Analysis</h2>
+        ${(r.risks && r.risks.length) ? r.risks.map(rk => `<p><strong>[${esc(rk.severity)}]</strong> ${esc(rk.risk)}<br/><span class="muted">Mitigation: ${esc(rk.mitigation)}</span></p>`).join("") : ""}
+        ${r.swot ? `<div class="grid2 swot">
+          <div class="box"><span class="lbl">Strengths</span>${list(r.swot.strengths)}</div>
+          <div class="box"><span class="lbl">Weaknesses</span>${list(r.swot.weaknesses)}</div>
+          <div class="box"><span class="lbl">Opportunities</span>${list(r.swot.opportunities)}</div>
+          <div class="box"><span class="lbl">Threats</span>${list(r.swot.threats)}</div>
+        </div>` : ""}
+      </section>`)
+    if (finalHash) sections.push(`
+      <section><h2>7 · Integrity</h2>
+        <p class="muted">SHA-256 tamper-evident audit chain${auditChain?.verified ? " — verified ✓" : ""}.</p>
+        <p class="hash">${esc(finalHash)}</p>
+      </section>`)
+
+    const html = `<!doctype html><html><head><meta charset="utf-8"/>
+      <title>${esc(plan.idea)} — PitchCraft Business Plan</title>
+      <style>
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1a1a2e; max-width: 820px; margin: 0 auto; padding: 48px 40px; line-height: 1.55; }
+        .brand { color: #7c3aed; font-weight: 700; letter-spacing: -0.02em; font-size: 14px; }
+        h1 { font-size: 26px; margin: 6px 0 4px; line-height: 1.25; }
+        .meta { color: #6b7280; font-size: 12px; margin-bottom: 28px; }
+        h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.06em; color: #7c3aed; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; margin: 28px 0 12px; }
+        section { page-break-inside: avoid; }
+        p { font-size: 13px; margin: 6px 0; }
+        .lead { font-size: 15px; font-weight: 600; }
+        .score { font-size: 30px; font-weight: 800; color: #7c3aed; margin: 0; }
+        .score span { font-size: 13px; font-weight: 500; color: #6b7280; }
+        .muted { color: #6b7280; }
+        ul { margin: 4px 0 8px; padding-left: 18px; }
+        li { font-size: 13px; margin: 2px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 12px; }
+        th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+        th { color: #6b7280; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; }
+        .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 8px 0; }
+        .box { border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 12px; }
+        .box .lbl { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; margin-bottom: 2px; }
+        .box strong { font-size: 14px; }
+        .swot ul { margin: 2px 0; }
+        .persona { border-left: 2px solid #ddd6fe; padding-left: 12px; margin: 10px 0; }
+        .hash { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 10px; word-break: break-all; color: #374151; background: #f9fafb; padding: 8px; border-radius: 6px; }
+        .footer { margin-top: 36px; padding-top: 12px; border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 11px; }
+        @media print { body { padding: 0; } @page { margin: 18mm; } }
+      </style></head>
+      <body>
+        <p class="brand">✦ PitchCraft</p>
+        <h1>${esc(plan.idea)}</h1>
+        <p class="meta">AI-generated business plan · Generated ${esc(generated)}</p>
+        ${sections.join("")}
+        <p class="footer">Generated by PitchCraft — a 7-agent AI business-plan engine. This document is AI-generated and should be validated before use in fundraising.</p>
+        <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 350); };<\/script>
+      </body></html>`
+
+    const w = window.open("", "_blank")
+    if (!w) {
+      alert("Please allow pop-ups to download your plan as a PDF.")
+      return
+    }
+    w.document.open()
+    w.document.write(html)
+    w.document.close()
+  }
+
   const v = plan.validation
   const m = plan.market_research
   const b = plan.business_plan
@@ -1585,10 +1712,14 @@ export default function PlanDisplay({ plan: planProp }: { plan: BusinessPlan }) 
             {/* Investor Email Generator */}
             <InvestorEmailBox plan={plan} />
 
-            <button onClick={() => window.print()}
-              className="w-full py-3 rounded-xl text-sm cursor-pointer transition-colors"
-              style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.08)" }}>
-              🖨 Print / Save as PDF
+            <button onClick={handleDownloadPdf}
+              className="w-full py-3 rounded-xl text-sm cursor-pointer transition-colors flex items-center justify-center gap-2"
+              style={{ background: "rgba(124,58,237,0.12)", color: "hsl(258,80%,80%)", border: "1px solid rgba(124,58,237,0.3)" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 3v11m0 0l-4-4m4 4l4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+              Download full plan as PDF
             </button>
           </>
         )}

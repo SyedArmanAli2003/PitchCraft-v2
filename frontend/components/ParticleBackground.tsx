@@ -96,6 +96,7 @@ export default function ParticleBackground() {
     scene.add(lines)
 
     let id: number, t = 0
+    const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
     const animate = () => {
       id = requestAnimationFrame(animate)
       t += 0.006
@@ -110,7 +111,23 @@ export default function ParticleBackground() {
       blob1.rotation.y = t*0.3
       renderer.render(scene, camera)
     }
-    animate()
+    if (reduceMotion) {
+      renderer.render(scene, camera)   // single static frame, no loop
+    } else {
+      animate()
+    }
+
+    // Pause the render loop when the tab is hidden to save CPU/battery.
+    const onVisibility = () => {
+      if (reduceMotion) return
+      if (document.hidden) {
+        cancelAnimationFrame(id)
+      } else {
+        cancelAnimationFrame(id)
+        animate()
+      }
+    }
+    document.addEventListener("visibilitychange", onVisibility)
 
     const onResize = () => {
       camera.aspect = window.innerWidth / window.innerHeight
@@ -123,6 +140,7 @@ export default function ParticleBackground() {
       cancelAnimationFrame(id)
       window.removeEventListener("mousemove", onMouseMove)
       window.removeEventListener("resize", onResize)
+      document.removeEventListener("visibilitychange", onVisibility)
       renderer.dispose(); geo.dispose(); mat.dispose()
       lineGeo.dispose(); tex.dispose()
     }

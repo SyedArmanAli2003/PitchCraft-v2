@@ -100,14 +100,92 @@ const AGENTS = [
   { num: 7, name: "Chief of Staff", role: "Compiles, seals & saves to InsForge", badge: "InsForge", accent: "rgba(16,185,129,0.10)" },
 ]
 
+// ─── Feature card icons (gradient SVGs, synced with the violet UI) ───────────
+function FeatureIcon({ id, children }: { id: string; children: React.ReactNode }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <defs>
+        <linearGradient id={id} x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+          <stop stopColor="hsl(258,85%,66%)" />
+          <stop offset="1" stopColor="hsl(280,82%,74%)" />
+        </linearGradient>
+      </defs>
+      {children}
+    </svg>
+  )
+}
+
+function ReviewIcon() {
+  return (
+    <FeatureIcon id="ft-review">
+      {/* pause-and-review: shield with pause bars */}
+      <path d="M12 2.5l7 2.5v5c0 4.5-3 8-7 9.5-4-1.5-7-5-7-9.5V5l7-2.5Z" stroke="url(#ft-review)" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M10.3 9v4.2M13.7 9v4.2" stroke="url(#ft-review)" strokeWidth="1.5" strokeLinecap="round" />
+    </FeatureIcon>
+  )
+}
+function DatabaseIcon() {
+  return (
+    <FeatureIcon id="ft-db">
+      <ellipse cx="12" cy="5.5" rx="7" ry="2.8" stroke="url(#ft-db)" strokeWidth="1.5" />
+      <path d="M5 5.5v6c0 1.55 3.13 2.8 7 2.8s7-1.25 7-2.8v-6" stroke="url(#ft-db)" strokeWidth="1.5" />
+      <path d="M5 11.5v6c0 1.55 3.13 2.8 7 2.8s7-1.25 7-2.8v-6" stroke="url(#ft-db)" strokeWidth="1.5" />
+    </FeatureIcon>
+  )
+}
+function BoltIcon() {
+  return (
+    <FeatureIcon id="ft-bolt">
+      <path d="M13 2L4.5 13.2c-.4.5 0 1.3.7 1.3H11l-1 8.5 8.5-11.2c.4-.5 0-1.3-.7-1.3H12l1-8.5Z" stroke="url(#ft-bolt)" strokeWidth="1.5" strokeLinejoin="round" fill="rgba(124,58,237,0.12)" />
+    </FeatureIcon>
+  )
+}
+function ChainIcon() {
+  return (
+    <FeatureIcon id="ft-chain">
+      <path d="M9.5 14.5l5-5" stroke="url(#ft-chain)" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M8 12L6 14a3.2 3.2 0 0 0 4.5 4.5l2-2" stroke="url(#ft-chain)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M16 12l2-2a3.2 3.2 0 0 0-4.5-4.5l-2 2" stroke="url(#ft-chain)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </FeatureIcon>
+  )
+}
+function TraceIcon() {
+  return (
+    <FeatureIcon id="ft-trace">
+      <circle cx="11" cy="11" r="6.5" stroke="url(#ft-trace)" strokeWidth="1.5" />
+      <path d="M16 16l4 4" stroke="url(#ft-trace)" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M8 11.5l2 2 3.5-4" stroke="url(#ft-trace)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    </FeatureIcon>
+  )
+}
+function CascadeIcon() {
+  return (
+    <FeatureIcon id="ft-cascade">
+      <path d="M12 3l8 4-8 4-8-4 8-4Z" stroke="url(#ft-cascade)" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M4 12l8 4 8-4" stroke="url(#ft-cascade)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 16.5l8 4 8-4" stroke="url(#ft-cascade)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
+    </FeatureIcon>
+  )
+}
+function ShareIcon() {
+  return (
+    <FeatureIcon id="ft-share">
+      <circle cx="6" cy="12" r="2.4" stroke="url(#ft-share)" strokeWidth="1.5" />
+      <circle cx="17.5" cy="6" r="2.4" stroke="url(#ft-share)" strokeWidth="1.5" />
+      <circle cx="17.5" cy="18" r="2.4" stroke="url(#ft-share)" strokeWidth="1.5" />
+      <path d="M8.1 10.9l7.3-3.8M8.1 13.1l7.3 3.8" stroke="url(#ft-share)" strokeWidth="1.5" strokeLinecap="round" />
+    </FeatureIcon>
+  )
+}
+
 const FEATURES = [
-  { icon: "⏸️", title: "Human-in-the-loop review", body: "After market research, the agent pauses. You review, steer the strategy, then approve before it continues." },
-  { icon: "🗄️", title: "InsForge grounded", body: "Real industry data from InsForge Postgres feeds every market analysis. Plans are stored, auditable, and searchable." },
-  { icon: "⚡", title: "InsForge Realtime", body: "A Postgres trigger broadcasts every step over WebSockets. Open a shared plan on a second device and watch it build live — no refresh." },
-  { icon: "🔗", title: "SHA-256 audit chain", body: "Each generation step is hashed into a tamper-evident chain. The output is verifiable by anyone." },
-  { icon: "🔎", title: "Fully traced", body: "Every model call is traced and monitored. Full observability — latency, tokens, and logic steps — for every plan." },
-  { icon: "🌊", title: "Multi-model cascade", body: "Gemini 3 Flash → 3.5 Flash → 2.5 Flash, then a free InsForge Model Gateway fallback. Rotates keys on quota. Never crashes on one model's limits." },
-  { icon: "📤", title: "Share & export", body: "Shareable URL + print-to-PDF in one click. Send your plan to investors in under 60 seconds." },
+  { icon: <ReviewIcon />,   title: "Human-in-the-loop review", body: "After market research, the agent pauses. You review, steer the strategy, then approve before it continues." },
+  { icon: <DatabaseIcon />, title: "InsForge grounded", body: "Real industry data from InsForge Postgres feeds every market analysis. Plans are stored, auditable, and searchable." },
+  { icon: <BoltIcon />,     title: "InsForge Realtime", body: "A Postgres trigger broadcasts every step over WebSockets. Open a shared plan on a second device and watch it build live — no refresh." },
+  { icon: <ChainIcon />,    title: "SHA-256 audit chain", body: "Each generation step is hashed into a tamper-evident chain. The output is verifiable by anyone." },
+  { icon: <TraceIcon />,    title: "Fully traced", body: "Every model call is traced and monitored. Full observability — latency, tokens, and logic steps — for every plan." },
+  { icon: <CascadeIcon />,  title: "Multi-model cascade", body: "Gemini 3 Flash → 3.5 Flash → 2.5 Flash, then a free InsForge Model Gateway fallback. Rotates keys on quota. Never crashes on one model's limits." },
+  { icon: <ShareIcon />,    title: "Share & export", body: "Shareable URL + a polished PDF export in one click. Send your full plan to investors in under 60 seconds." },
 ]
 
 const FOOTER_PRODUCT = [
@@ -359,7 +437,13 @@ export function FeaturesSection() {
               style={{ background: "hsl(240,15%,8%)", border: "1px solid rgba(255,255,255,0.06)" }}
             >
               <div className="mb-4 flex items-center gap-3">
-                <span className="text-xl" aria-hidden="true">{f.icon}</span>
+                <span
+                  className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: "rgba(124,58,237,0.12)", border: "1px solid rgba(124,58,237,0.2)" }}
+                  aria-hidden="true"
+                >
+                  {f.icon}
+                </span>
                 <p className="text-white font-semibold">{f.title}</p>
               </div>
               <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.45)" }}>{f.body}</p>
