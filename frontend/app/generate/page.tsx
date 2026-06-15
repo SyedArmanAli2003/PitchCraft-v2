@@ -1032,7 +1032,7 @@ function GenerateContent() {
                         color: selectedBadge?.color ?? "hsl(258,80%,78%)",
                         border: `1px solid ${selectedBadge?.border ?? "rgba(124,58,237,0.3)"}`,
                       }}>
-                      {MODEL_ICONS[selectedModel]} {models.find(m => m.key === selectedModel)?.display ?? selectedModel}
+                      {models.find(m => m.key === selectedModel)?.display ?? selectedModel}
                     </span>
                     {usedModel && usedModel !== selectedModel && (
                       <span className="text-xs px-2 py-0.5 rounded-full"

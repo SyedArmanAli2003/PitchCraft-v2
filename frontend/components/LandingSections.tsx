@@ -2,19 +2,89 @@
 import { useRouter } from "next/navigation"
 import { LogoMark } from "@/components/GradientLogo"
 
+function IdeaIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="idea-grad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+          <stop stopColor="hsl(258,85%,64%)" />
+          <stop offset="1" stopColor="hsl(280,80%,72%)" />
+        </linearGradient>
+      </defs>
+      {/* Lightbulb shape */}
+      <path d="M12 2a7 7 0 0 1 4.9 11.95c-.65.65-1.1 1.45-1.25 2.3H8.35c-.15-.85-.6-1.65-1.25-2.3A7 7 0 0 1 12 2Z" stroke="url(#idea-grad)" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M9 20h6M10 22h4" stroke="url(#idea-grad)" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M12 6v3M10.2 7.8l2.12 2.12" stroke="url(#idea-grad)" strokeWidth="1.2" strokeLinecap="round" opacity="0.6" />
+    </svg>
+  )
+}
+
+function TeamIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="team-grad" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+          <stop stopColor="hsl(195,90%,60%)" />
+          <stop offset="1" stopColor="hsl(258,85%,64%)" />
+        </linearGradient>
+      </defs>
+      {/* Central node */}
+      <circle cx="12" cy="12" r="2.2" fill="url(#team-grad)" />
+      {/* Outer agent nodes */}
+      <circle cx="12" cy="4" r="1.7" stroke="url(#team-grad)" strokeWidth="1.3" />
+      <circle cx="19.5" cy="8" r="1.7" stroke="url(#team-grad)" strokeWidth="1.3" />
+      <circle cx="19.5" cy="16" r="1.7" stroke="url(#team-grad)" strokeWidth="1.3" />
+      <circle cx="12" cy="20" r="1.7" stroke="url(#team-grad)" strokeWidth="1.3" />
+      <circle cx="4.5" cy="16" r="1.7" stroke="url(#team-grad)" strokeWidth="1.3" />
+      <circle cx="4.5" cy="8" r="1.7" stroke="url(#team-grad)" strokeWidth="1.3" />
+      {/* Connecting lines */}
+      <line x1="12" y1="5.7" x2="12" y2="9.8" stroke="url(#team-grad)" strokeWidth="1" opacity="0.5" />
+      <line x1="18.1" y1="8.8" x2="14.1" y2="10.9" stroke="url(#team-grad)" strokeWidth="1" opacity="0.5" />
+      <line x1="18.1" y1="15.2" x2="14.1" y2="13.1" stroke="url(#team-grad)" strokeWidth="1" opacity="0.5" />
+      <line x1="12" y1="18.3" x2="12" y2="14.2" stroke="url(#team-grad)" strokeWidth="1" opacity="0.5" />
+      <line x1="5.9" y1="15.2" x2="9.9" y2="13.1" stroke="url(#team-grad)" strokeWidth="1" opacity="0.5" />
+      <line x1="5.9" y1="8.8" x2="9.9" y2="10.9" stroke="url(#team-grad)" strokeWidth="1" opacity="0.5" />
+    </svg>
+  )
+}
+
+function PlanIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="plan-grad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+          <stop stopColor="hsl(142,71%,48%)" />
+          <stop offset="1" stopColor="hsl(195,90%,55%)" />
+        </linearGradient>
+      </defs>
+      {/* Document outline */}
+      <rect x="4" y="2" width="13" height="17" rx="2" stroke="url(#plan-grad)" strokeWidth="1.5" />
+      <path d="M14 2v5h3" stroke="url(#plan-grad)" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+      {/* Chart bars inside document */}
+      <rect x="7" y="13" width="2" height="3" rx="0.5" fill="url(#plan-grad)" opacity="0.75" />
+      <rect x="10.5" y="11" width="2" height="5" rx="0.5" fill="url(#plan-grad)" opacity="0.9" />
+      {/* Tick mark / checkmark */}
+      <path d="M7 9l1.5 1.5L12 7" stroke="url(#plan-grad)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 const HOW_IT_WORKS = [
   {
     num: "01",
+    icon: <IdeaIcon />,
     title: "Describe your idea",
     body: "One sentence is enough. What you're building, who it's for, and what problem it solves. That's it.",
   },
   {
     num: "02",
+    icon: <TeamIcon />,
     title: "Seven specialists collaborate",
     body: "A Strategy Analyst, Market Researcher, Customer Insights Specialist, Business Architect, Financial Modeller, Risk Officer, and Chief of Staff — working in sequence, handing off like a real team.",
   },
   {
     num: "03",
+    icon: <PlanIcon />,
     title: "Receive your full business plan",
     body: "Viability score, market sizing, personas, full strategy, 3-year financials, SWOT analysis. Cryptographically audited. Ready to share.",
   },
@@ -31,13 +101,13 @@ const AGENTS = [
 ]
 
 const FEATURES = [
-  { title: "Human-in-the-loop review", body: "After market research, the agent pauses. You review, steer the strategy, then approve before it continues." },
-  { title: "InsForge grounded", body: "Real industry data from InsForge Postgres feeds every market analysis. Plans are stored, auditable, and searchable." },
-  { title: "InsForge Realtime", body: "A Postgres trigger broadcasts every step over WebSockets. Open a shared plan on a second device and watch it build live — no refresh." },
-  { title: "SHA-256 audit chain", body: "Each generation step is hashed into a tamper-evident chain. The output is verifiable by anyone." },
-  { title: "Arize traced", body: "Every Gemini call is traced to Arize Phoenix. Full observability — latency, tokens, model — for every plan." },
-  { title: "Multi-model cascade", body: "Gemini 3 Flash → 3.5 Flash → 2.5 Flash, then a free InsForge Model Gateway fallback. Rotates keys on quota. Never crashes on one model's limits." },
-  { title: "Share & export", body: "Shareable URL + print-to-PDF in one click. Send your plan to investors in under 60 seconds." },
+  { icon: "⏸️", title: "Human-in-the-loop review", body: "After market research, the agent pauses. You review, steer the strategy, then approve before it continues." },
+  { icon: "🗄️", title: "InsForge grounded", body: "Real industry data from InsForge Postgres feeds every market analysis. Plans are stored, auditable, and searchable." },
+  { icon: "⚡", title: "InsForge Realtime", body: "A Postgres trigger broadcasts every step over WebSockets. Open a shared plan on a second device and watch it build live — no refresh." },
+  { icon: "🔗", title: "SHA-256 audit chain", body: "Each generation step is hashed into a tamper-evident chain. The output is verifiable by anyone." },
+  { icon: "🔎", title: "Fully traced", body: "Every model call is traced and monitored. Full observability — latency, tokens, and logic steps — for every plan." },
+  { icon: "🌊", title: "Multi-model cascade", body: "Gemini 3 Flash → 3.5 Flash → 2.5 Flash, then a free InsForge Model Gateway fallback. Rotates keys on quota. Never crashes on one model's limits." },
+  { icon: "📤", title: "Share & export", body: "Shareable URL + print-to-PDF in one click. Send your plan to investors in under 60 seconds." },
 ]
 
 const FOOTER_PRODUCT = [
@@ -50,7 +120,6 @@ const FOOTER_BUILT_WITH = [
   ["InsForge", "https://insforge.dev"],
   ["Google Cloud / Gemini", "https://cloud.google.com"],
   ["Google ADK", "https://cloud.google.com/vertex-ai/generative-ai/docs/agent-builder/overview"],
-  ["Arize Phoenix", "https://phoenix.arize.com"],
 ] as const
 
 // ─── Section: How It Works ────────────────────────────────────────────────── //
@@ -90,7 +159,7 @@ export function HowItWorksSection() {
                 className="w-12 h-12 rounded-xl flex items-center justify-center mb-5"
                 style={{ background: "rgba(124,58,237,0.12)", border: "1px solid rgba(124,58,237,0.2)" }}
               >
-                <LogoMark size={20} />
+                {s.icon}
               </div>
               <p className="text-xs font-bold mb-1" style={{ color: "hsl(258,85%,64%)" }}>{s.num}</p>
               <h3 className="text-white font-semibold text-lg mb-3">{s.title}</h3>
@@ -290,7 +359,7 @@ export function FeaturesSection() {
               style={{ background: "hsl(240,15%,8%)", border: "1px solid rgba(255,255,255,0.06)" }}
             >
               <div className="mb-4 flex items-center gap-3">
-                <LogoMark size={18} />
+                <span className="text-xl" aria-hidden="true">{f.icon}</span>
                 <p className="text-white font-semibold">{f.title}</p>
               </div>
               <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.45)" }}>{f.body}</p>
@@ -319,7 +388,6 @@ export function CtaSection() {
             color: "hsl(258,80%,78%)",
           }}
         >
-          <LogoMark size={14} />
           Free during the hackathon
         </div>
         <h2
@@ -357,7 +425,7 @@ export function FooterSection() {
         {/* Brand */}
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <LogoMark size={18} />
+            <span className="text-xl select-none" style={{ color: "hsl(258,90%,66%)" }}>✦</span>
             <span className="font-semibold text-white text-lg">
               Pitch<span style={{ color: "hsl(258,90%,66%)" }}>Craft</span>
             </span>
@@ -367,7 +435,7 @@ export function FooterSection() {
             <br />Google Cloud Rapid Agent Hackathon 2026.
           </p>
           <div className="flex flex-wrap gap-2 mt-5">
-            {["InsForge", "Arize Partner", "Google ADK"].map(badge => (
+            {["InsForge", "Google ADK"].map(badge => (
               <span
                 key={badge}
                 className="text-xs px-2.5 py-1 rounded-full"

@@ -12,9 +12,7 @@ const config = {
     NEXT_PUBLIC_INSFORGE_ANON_KEY:
       process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY ||
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OC0xMjM0LTU2NzgtOTBhYi1jZGVmMTIzNDU2NzgiLCJlbWFpbCI6ImFub25AaW5zZm9yZ2UuY29tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNzY3OTd9.gZZV1BU70UgtUit3FnGXBNbVuvLIQNFZoVHlZ_iZT3g",
-    NEXT_PUBLIC_API_BASE:
-      process.env.NEXT_PUBLIC_API_BASE ||
-      "https://pitchcraft-api-4cecea40-48ff-439f-a853-2b9029124c34.fly.dev",
+    NEXT_PUBLIC_API_BASE: process.env.NEXT_PUBLIC_API_BASE || "",
   },
 
   // Self-contained server bundle — only for Docker/Fly.io (set BUILD_STANDALONE=true).
