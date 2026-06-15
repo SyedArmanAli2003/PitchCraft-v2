@@ -322,6 +322,26 @@ function ModelSelector({
   )
 }
 
+// ── Inspire Me ideas ─────────────────────────────────────────────────────────
+const INSPIRE_IDEAS = [
+  "An app that connects rural farmers directly to urban consumers, eliminating middlemen and doubling farmer income",
+  "A subscription service that delivers personalised Ayurvedic wellness boxes based on your dosha and health goals",
+  "An AI tutor that teaches coding to kids in Tier-2 Indian cities using vernacular languages and WhatsApp",
+  "A marketplace for skilled tradespeople (plumbers, electricians) with instant booking and transparent pricing",
+  "A B2B SaaS that automates GST filing and inventory reconciliation for small kirana store owners",
+  "A mental health platform offering affordable therapy sessions in regional languages via video call",
+  "An electric cargo bike delivery network for last-mile logistics in congested city centres",
+  "A peer-to-peer lending platform for women-led micro-enterprises in semi-urban areas",
+  "An AI-powered legal document assistant that drafts contracts and NDAs in plain English for startups",
+  "A food-tech startup sourcing surplus restaurant meals and selling them at 70% discount to office workers",
+  "A wearable health monitor for senior citizens that detects falls and vitals, alerting family instantly",
+  "A platform that gamifies waste segregation and rewards households with hyperlocal discount vouchers",
+  "An online marketplace connecting Indian artisans with global buyers, handling export and logistics end-to-end",
+  "A SaaS tool that generates social media content calendars and designs for small business owners using AI",
+  "A telemedicine platform for livestock farmers that connects them with veterinary specialists via video call",
+  "A carbon credit marketplace allowing Indian SMEs to offset emissions by funding rural renewable energy projects",
+]
+
 function GenerateContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -332,6 +352,8 @@ function GenerateContent() {
   const [isStreaming, setIsStreaming] = useState(false)
   const [showGate, setShowGate]      = useState(false)
   const [gateData, setGateData]      = useState<Record<string, unknown> | null>(null)
+  const [inspireIdx, setInspireIdx]  = useState(0)
+  const [inspireFlash, setInspireFlash] = useState(false)
   // Human-in-the-loop approval gate (after Step 2 / market research)
   const [showApproval, setShowApproval]   = useState(false)
   const [approvalId, setApprovalId]       = useState<string | null>(null)
@@ -888,9 +910,43 @@ function GenerateContent() {
               onBlur={e => (e.target.style.borderColor = "rgba(255,255,255,0.08)")}
               onKeyDown={e => { if (e.key === "Enter" && e.metaKey) startGeneration(idea) }}
             />
-            <div className="flex justify-between items-center mt-2 mb-6">
+            <div className="flex justify-between items-center mt-2 mb-3">
               <p className="text-xs" style={{ color: "rgba(255,255,255,0.2)" }}>{idea.length} / 200</p>
               <p className="text-xs" style={{ color: "rgba(255,255,255,0.2)" }}>⌘ + Enter to submit</p>
+            </div>
+
+            {/* ── Inspire Me ── */}
+            <div className="flex flex-wrap gap-2 mb-5">
+              <button
+                type="button"
+                onClick={() => {
+                  const ideas = INSPIRE_IDEAS
+                  const next = (inspireIdx + 1) % ideas.length
+                  setInspireIdx(next)
+                  setIdea(ideas[next])
+                  setInspireFlash(true)
+                  setTimeout(() => setInspireFlash(false), 600)
+                }}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full cursor-pointer transition-all duration-300"
+                style={{
+                  background: inspireFlash ? "rgba(124,58,237,0.25)" : "rgba(124,58,237,0.1)",
+                  border: "1px solid rgba(124,58,237,0.35)",
+                  color: "hsl(258,80%,78%)",
+                  boxShadow: inspireFlash ? "0 0 16px rgba(124,58,237,0.4)" : "none",
+                }}
+              >
+                <span>✨</span> Inspire me
+              </button>
+              {idea && (
+                <button
+                  type="button"
+                  onClick={() => setIdea("")}
+                  className="text-xs px-3 py-1.5 rounded-full cursor-pointer transition-all"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.35)" }}
+                >
+                  ✕ Clear
+                </button>
+              )}
             </div>
 
             <ModelSelector

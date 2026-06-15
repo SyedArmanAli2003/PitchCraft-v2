@@ -16,7 +16,44 @@ const STEP_NAMES: Record<number, string> = {
   7: "Chief of Staff",
 }
 
-// ── Viability Radar Chart ────────────────────────────────────────────────────
+// ── Gender-heuristic avatar ──────────────────────────────────────────────────
+const FEMALE_NAMES = new Set(["priya","sara","sarah","maya","ananya","pooja","neha","kavya","divya","anjali","shreya","deepika","meena","sunita","rekha","geeta","lata","sita","lakshmi","radha","gita","usha","asha","nisha","mona","sona","riya","tanya","swati","priti","rati","rani","devi","lisa","mary","emma","anna","kate","jane","amy","emily","jessica","sophia","olivia","ava","isabella","mia","ella","chloe","grace","aisha","fatima","zara","layla","hana","nour","yasmin","amira"])
+
+function PersonaAvatar({ name, size = 48 }: { name: string; size?: number }) {
+  const firstName = name.split(/[,\s]+/)[0].toLowerCase()
+  const isFemale = FEMALE_NAMES.has(firstName)
+  const initials = name.split(" ").filter(Boolean).map(n => n[0]).join("").slice(0,2).toUpperCase()
+  const id = `grad-${initials}`
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" style={{ flexShrink: 0 }}>
+      <defs>
+        <radialGradient id={id} cx="40%" cy="30%" r="70%">
+          {isFemale ? (
+            <>
+              <stop offset="0%" stopColor="#f9a8d4" />
+              <stop offset="100%" stopColor="#9333ea" />
+            </>
+          ) : (
+            <>
+              <stop offset="0%" stopColor="#93c5fd" />
+              <stop offset="100%" stopColor="#3730a3" />
+            </>
+          )}
+        </radialGradient>
+      </defs>
+      <circle cx="24" cy="24" r="24" fill={`url(#${id})`} />
+      {/* Silhouette */}
+      <circle cx="24" cy="19" r="7" fill="rgba(255,255,255,0.7)" />
+      <ellipse cx="24" cy="38" rx="11" ry="8" fill="rgba(255,255,255,0.45)" />
+      {/* Initials overlay */}
+      <text x="24" y="28" textAnchor="middle" dominantBaseline="middle"
+        fontSize="11" fontWeight="700" fill="white" fontFamily="system-ui,sans-serif">
+        {initials}
+      </text>
+    </svg>
+  )
+}
+
 function RadarChart({ scores }: { scores: { label: string; value: number }[] }) {
   const cx = 120, cy = 120, r = 90
   const n = scores.length
@@ -1209,22 +1246,65 @@ export default function PlanDisplay({ plan: planProp }: { plan: BusinessPlan }) 
                   </div>
                 </div>
                 <p className="text-sm mb-4 pl-3" style={{ borderLeft: "2px solid hsl(258,85%,64%)", color: "rgba(255,255,255,0.6)", fontStyle: "italic" }}>{m.market_gap}</p>
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr style={{ color: "rgba(255,255,255,0.35)" }}>
-                      <th className="text-left py-1">Competitor</th>
-                      <th className="text-left py-1">Weakness</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {m.top_competitors?.map((c, i) => (
-                      <tr key={i} style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-                        <td className="py-1.5 text-white">{c.name}</td>
-                        <td className="py-1.5" style={{ color: "rgba(255,255,255,0.5)" }}>{c.weakness}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                {/* Competitor table with search links */}
+                {m.top_competitors && m.top_competitors.length > 0 && (
+                  <>
+                    <table className="w-full text-xs mb-3">
+                      <thead>
+                        <tr style={{ color: "rgba(255,255,255,0.35)" }}>
+                          <th className="text-left py-1">Competitor</th>
+                          <th className="text-left py-1">Weakness</th>
+                          <th className="text-right py-1">Research</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {m.top_competitors.map((c, i) => (
+                          <tr key={i} style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                            <td className="py-1.5 text-white font-medium">{c.name}</td>
+                            <td className="py-1.5" style={{ color: "rgba(255,255,255,0.5)" }}>{c.weakness}</td>
+                            <td className="py-1.5 text-right">
+                              <a
+                                href={`https://duckduckgo.com/?q=${encodeURIComponent(c.name + " company startup")}`}
+                                target="_blank" rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full transition-all"
+                                style={{ background: "rgba(59,130,246,0.1)", color: "rgb(147,197,253)", border: "1px solid rgba(59,130,246,0.2)" }}
+                              >
+                                🔍 Search
+                              </a>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {/* Market industry research link */}
+                    <div className="flex gap-2 flex-wrap">
+                      <a
+                        href={`https://duckduckgo.com/?q=${encodeURIComponent((m.market_size || plan.idea) + " market size report 2024")}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="text-xs px-3 py-1.5 rounded-full transition-all"
+                        style={{ background: "rgba(124,58,237,0.1)", color: "hsl(258,80%,78%)", border: "1px solid rgba(124,58,237,0.25)" }}
+                      >
+                        📊 Market reports
+                      </a>
+                      <a
+                        href={`https://www.statista.com/search/?q=${encodeURIComponent(plan.idea)}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="text-xs px-3 py-1.5 rounded-full transition-all"
+                        style={{ background: "rgba(34,197,94,0.08)", color: "rgb(74,222,128)", border: "1px solid rgba(34,197,94,0.2)" }}
+                      >
+                        📈 Statista
+                      </a>
+                      <a
+                        href={`https://www.crunchbase.com/discover/organization.companies/field/organizations/categories/${encodeURIComponent(plan.idea.split(" ").slice(0,2).join("-").toLowerCase())}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="text-xs px-3 py-1.5 rounded-full transition-all"
+                        style={{ background: "rgba(234,179,8,0.08)", color: "rgb(250,204,21)", border: "1px solid rgba(234,179,8,0.2)" }}
+                      >
+                        🚀 Crunchbase
+                      </a>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
@@ -1238,10 +1318,7 @@ export default function PlanDisplay({ plan: planProp }: { plan: BusinessPlan }) 
                       style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(124,58,237,0.2)" }}>
                       {/* Avatar + name */}
                       <div className="flex items-center gap-3">
-                        <div className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
-                          style={{ background: "linear-gradient(135deg,rgba(124,58,237,0.4),rgba(59,130,246,0.3))", color: "white", border: "2px solid rgba(124,58,237,0.4)" }}>
-                          {p.name.slice(0,2).toUpperCase()}
-                        </div>
+                        <PersonaAvatar name={p.name} size={48} />
                         <div>
                           <p className="text-sm font-semibold text-white">{p.name}</p>
                           <p className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
@@ -1361,20 +1438,44 @@ export default function PlanDisplay({ plan: planProp }: { plan: BusinessPlan }) 
               <div className="rounded-2xl p-6 mb-6"
                 style={{ background: "hsl(240,15%,8%)", border: "1px solid rgba(255,255,255,0.06)" }}>
                 <p className="text-xs uppercase tracking-widest mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>Financial Projections</p>
-                <div className="space-y-3 mb-4">
-                  {([["Year 1", f.year1_revenue, 40],["Year 2", f.year2_revenue, 65],["Year 3", f.year3_revenue, 100]] as [string,string,number][]).map(([yr, rev, pct]) => (
-                    <div key={yr} className="flex items-center gap-3 text-sm">
-                      <span className="w-12 text-right text-xs flex-shrink-0" style={{ color: "rgba(255,255,255,0.4)" }}>{yr}</span>
-                      <div className="flex-1 h-2 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
-                        <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${pct}%`, background: "hsl(258,85%,64%)" }} />
+                {/* Animated revenue bars */}
+                <style>{`
+                  @keyframes growBar { from { width: 0% } }
+                  .fin-bar { animation: growBar 1.2s cubic-bezier(.22,1,.36,1) both; }
+                  .fin-bar-y1 { animation-delay: 0.1s; }
+                  .fin-bar-y2 { animation-delay: 0.35s; }
+                  .fin-bar-y3 { animation-delay: 0.6s; }
+                  .fin-stat-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+                  .fin-stat-card:hover { transform: translateY(-5px) scale(1.03); box-shadow: 0 12px 32px rgba(124,58,237,0.25); }
+                `}</style>
+                <div className="space-y-4 mb-5">
+                  {(["Year 1", "Year 2", "Year 3"] as const).map((yr, idx) => {
+                    const revs = [f.year1_revenue, f.year2_revenue, f.year3_revenue]
+                    const pcts = [40, 65, 100]
+                    const delays = ["fin-bar-y1", "fin-bar-y2", "fin-bar-y3"]
+                    return (
+                      <div key={yr}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>{yr}</span>
+                          <span className="text-xs font-semibold text-white">{revs[idx]}</span>
+                        </div>
+                        <div className="h-3 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+                          <div
+                            className={`fin-bar ${delays[idx]} h-full rounded-full`}
+                            style={{
+                              width: `${pcts[idx]}%`,
+                              background: `linear-gradient(90deg, hsl(258,85%,54%), hsl(258,85%,74%))`,
+                            }}
+                          />
+                        </div>
                       </div>
-                      <span className="text-white font-medium w-28 text-right text-xs flex-shrink-0">{rev}</span>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {([["Startup Cost", f.startup_cost],["Monthly Burn", f.monthly_burn],["Break Even", `Month ${f.break_even_month}`],["Funding", f.funding_needed]] as [string,string][]).map(([lbl, val]) => (
-                    <div key={lbl} className="text-center rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)" }}>
+                  {([["Startup Cost", f.startup_cost, "💼"],["Monthly Burn", f.monthly_burn, "🔥"],["Break Even", `Month ${f.break_even_month}`, "📅"],["Funding", f.funding_needed, "💰"]] as [string,string,string][]).map(([lbl, val, icon]) => (
+                    <div key={lbl} className="fin-stat-card text-center rounded-xl p-3 cursor-default" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                      <p className="text-lg mb-0.5">{icon}</p>
                       <p className="font-bold text-white text-sm">{val}</p>
                       <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.35)" }}>{lbl}</p>
                     </div>
@@ -1387,22 +1488,35 @@ export default function PlanDisplay({ plan: planProp }: { plan: BusinessPlan }) 
               <div className="rounded-2xl p-6 mb-6"
                 style={{ background: "hsl(240,15%,8%)", border: "1px solid rgba(255,255,255,0.06)" }}>
                 <p className="text-xs uppercase tracking-widest mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>Risk Analysis</p>
-                <div className="space-y-3 mb-6">
-                  {r.risks?.map((risk, i) => (
-                    <div key={i} className="flex items-start gap-3">
-                      <span className="text-xs px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5"
-                        style={{
-                          background: risk.severity==="High" ? "rgba(239,68,68,0.15)" : risk.severity==="Medium" ? "rgba(234,179,8,0.15)" : "rgba(34,197,94,0.15)",
-                          color: risk.severity==="High" ? "rgb(252,165,165)" : risk.severity==="Medium" ? "rgb(250,204,21)" : "rgb(74,222,128)",
-                        }}>
-                        {risk.severity}
-                      </span>
-                      <div>
-                        <p className="text-sm text-white">{risk.risk}</p>
-                        <p className="text-xs italic mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>{risk.mitigation}</p>
+                <div className="space-y-4 mb-6">
+                  {r.risks?.map((risk, i) => {
+                    const pct = risk.severity === "High" ? 82 : risk.severity === "Medium" ? 50 : 20
+                    const clr = risk.severity === "High" ? "rgba(239,68,68,0.85)" : risk.severity === "Medium" ? "rgba(234,179,8,0.85)" : "rgba(34,197,94,0.85)"
+                    const bg  = risk.severity === "High" ? "rgba(239,68,68,0.15)" : risk.severity === "Medium" ? "rgba(234,179,8,0.15)" : "rgba(34,197,94,0.15)"
+                    const txt = risk.severity === "High" ? "rgb(252,165,165)" : risk.severity === "Medium" ? "rgb(250,204,21)" : "rgb(74,222,128)"
+                    return (
+                      <div key={i} className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <div className="flex items-start gap-3 flex-1">
+                            <span className="text-xs px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5 font-semibold"
+                              style={{ background: bg, color: txt }}>
+                              {risk.severity}
+                            </span>
+                            <p className="text-sm text-white leading-snug">{risk.risk}</p>
+                          </div>
+                          <span className="text-xs font-bold flex-shrink-0" style={{ color: txt }}>{pct}%</span>
+                        </div>
+                        {/* Probability bar */}
+                        <div className="h-1 rounded-full mb-2" style={{ background: "rgba(255,255,255,0.06)" }}>
+                          <div
+                            className="h-full rounded-full"
+                            style={{ width: `${pct}%`, background: clr, transition: "width 1s ease" }}
+                          />
+                        </div>
+                        <p className="text-xs italic" style={{ color: "rgba(255,255,255,0.4)" }}>{risk.mitigation}</p>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
                 {r.swot && (
                   <div className="grid grid-cols-2 gap-3">
@@ -1430,7 +1544,8 @@ export default function PlanDisplay({ plan: planProp }: { plan: BusinessPlan }) 
             {v && m && (
               <div className="rounded-2xl p-6 mb-6"
                 style={{ background: "hsl(240,15%,8%)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <p className="text-xs uppercase tracking-widest mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>Viability Radar</p>
+                <p className="text-xs uppercase tracking-widest mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>Viability Radar</p>
+                <p className="text-xs mb-4" style={{ color: "rgba(255,255,255,0.3)" }}>How your startup scores across 5 key dimensions — larger area = stronger overall viability</p>
                 <RadarChart scores={[
                   { label: "Market",      value: Math.min(10, Math.max(1, Math.round((m.opportunity_score ?? 7)))) },
                   { label: "Revenue",     value: Math.min(10, Math.max(1, Math.round((v.viability_score ?? 7) * 0.9))) },
@@ -1438,6 +1553,30 @@ export default function PlanDisplay({ plan: planProp }: { plan: BusinessPlan }) 
                   { label: "Competition", value: Math.min(10, Math.max(1, 10 - Math.min(9, (m.top_competitors?.length ?? 3) * 2))) },
                   { label: "Execution",   value: Math.min(10, Math.max(1, Math.round((v.viability_score ?? 6) * 0.8))) },
                 ]} />
+                {/* Axis legend */}
+                <div className="mt-4 space-y-2">
+                  {([
+                    { axis: "Market",      desc: "Size and growth rate of the target market. High score = large, fast-growing opportunity." },
+                    { axis: "Revenue",     desc: "Strength of the revenue model and pricing power based on overall viability score." },
+                    { axis: "Innovation",  desc: "Degree of differentiation vs existing solutions. High = unique, hard-to-copy product." },
+                    { axis: "Competition", desc: "Lower competition = higher score. Calculated from number of identified direct competitors." },
+                    { axis: "Execution",   desc: "Founder / team readiness and operational complexity. Derived from viability assessment." },
+                  ]).map(({ axis, desc }) => (
+                    <div key={axis} className="flex items-start gap-2">
+                      <span className="text-xs font-semibold flex-shrink-0 w-20" style={{ color: "hsl(258,80%,78%)" }}>{axis}</span>
+                      <span className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>{desc}</span>
+                    </div>
+                  ))}
+                </div>
+                {/* Score band legend */}
+                <div className="flex gap-3 mt-4 pt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                  {([{label:"1–4",sub:"Needs Work",c:"rgb(252,165,165)",bg:"rgba(239,68,68,0.1)"},{label:"5–7",sub:"Good",c:"rgb(250,204,21)",bg:"rgba(234,179,8,0.1)"},{label:"8–10",sub:"Excellent",c:"rgb(74,222,128)",bg:"rgba(34,197,94,0.1)"}]).map(b => (
+                    <div key={b.label} className="flex-1 text-center rounded-lg py-1.5" style={{ background: b.bg }}>
+                      <p className="text-xs font-bold" style={{ color: b.c }}>{b.label}</p>
+                      <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>{b.sub}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
