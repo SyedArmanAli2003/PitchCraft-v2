@@ -6,8 +6,8 @@ type LogoMarkProps = {
 }
 
 /**
- * PitchCraft gradient mark (used instead of emoji UI icons).
- * Designed as a tiny inline SVG so it stays crisp and consistent.
+ * PitchCraft mark (lightweight: no SVG blur filters to avoid UI lag).
+ * Used in place of emoji UI icons.
  */
 export function LogoMark({ size = 18, className }: LogoMarkProps) {
     return (
@@ -20,45 +20,30 @@ export function LogoMark({ size = 18, className }: LogoMarkProps) {
             aria-hidden="true"
         >
             <defs>
+                {/* Lightweight gradient (no filters) */}
                 <linearGradient id="pc-grad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
                     <stop stopColor="hsl(258,85%,64%)" />
                     <stop offset="1" stopColor="hsl(142,71%,45%)" />
                 </linearGradient>
-                <filter id="pc-softGlow" x="-50%" y="-50%" width="200%" height="200%">
-                    <feGaussianBlur stdDeviation="2.2" result="blur" />
-                    <feColorMatrix
-                        type="matrix"
-                        values="
-              1 0 0 0 0
-              0 1 0 0 0
-              0 0 1 0 0
-              0 0 0 0.6 0"
-                    />
-                    <feMerge>
-                        <feMergeNode in="blur" />
-                        <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                </filter>
             </defs>
 
-            {/* Outer ring */}
+            {/* Outer ring (subtle, premium) */}
             <path
                 d="M12 2.5c5.25 0 9.5 4.25 9.5 9.5s-4.25 9.5-9.5 9.5S2.5 17.25 2.5 12 6.75 2.5 12 2.5Z"
                 stroke="url(#pc-grad)"
                 strokeWidth="1.6"
-                opacity="0.85"
+                opacity="0.9"
             />
-            {/* Core mark */}
-            <g filter="url(#pc-softGlow)">
-                <path
-                    d="M9 7.8 17.2 12 9 16.2V7.8Z"
-                    fill="url(#pc-grad)"
-                    opacity="0.95"
-                />
-            </g>
 
-            {/* Tiny dot */}
-            <circle cx="16.9" cy="7.3" r="1.1" fill="hsl(142,71%,45%)" opacity="0.95" />
+            {/* Core mark */}
+            <path
+                d="M9.2 8.1 17.1 12l-7.9 3.9V8.1Z"
+                fill="url(#pc-grad)"
+                opacity="0.98"
+            />
+
+            {/* Micro accent dot */}
+            <circle cx="16.7" cy="7.4" r="1.05" fill="hsl(142,71%,45%)" opacity="0.95" />
         </svg>
     )
 }
@@ -70,7 +55,7 @@ type StatusDotProps = {
 }
 
 /**
- * Minimal status indicator (replaces ✓ ⚠ 🔒 emoji chips).
+ * Minimal status indicator (replaces emoji-like status chips).
  */
 export function StatusDot({ variant = "info", size = 10, className }: StatusDotProps) {
     const map: Record<string, { bg: string; ring: string }> = {
@@ -80,6 +65,7 @@ export function StatusDot({ variant = "info", size = 10, className }: StatusDotP
         info: { bg: "rgba(124,58,237,0.18)", ring: "rgba(124,58,237,0.45)" },
     }
     const { bg, ring } = map[variant] ?? map.info
+
     return (
         <span
             className={className}
@@ -90,7 +76,6 @@ export function StatusDot({ variant = "info", size = 10, className }: StatusDotP
                 background: bg,
                 border: `1px solid ${ring}`,
                 display: "inline-block",
-                boxShadow: "0 0 18px rgba(124,58,237,0.12)",
             }}
             aria-hidden="true"
         />

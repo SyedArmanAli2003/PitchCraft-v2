@@ -1334,13 +1334,13 @@ export default function PlanDisplay({ plan: planProp }: { plan: BusinessPlan }) 
                           {p.location && (
                             <span className="text-xs px-2 py-0.5 rounded-full"
                               style={{ background: "rgba(59,130,246,0.12)", color: "rgb(147,197,253)", border: "1px solid rgba(59,130,246,0.25)" }}>
-                              📍 {p.location}
+                              Location: {p.location}
                             </span>
                           )}
                           {p.income_level && (
                             <span className="text-xs px-2 py-0.5 rounded-full"
                               style={{ background: "rgba(234,179,8,0.1)", color: "rgb(250,204,21)", border: "1px solid rgba(234,179,8,0.25)" }}>
-                              💰 {p.income_level}
+                              Income: {p.income_level}
                             </span>
                           )}
                         </div>

@@ -6,6 +6,7 @@ import StepCard from "@/components/StepCard"
 import type { AgentStep } from "@/lib/types"
 import { API, type ModelKey, type ModelOption } from "@/lib/config"
 import { getUserId } from "@/lib/user"
+import { LogoMark } from "@/components/GradientLogo"
 
 // Verified live 2026-06-10 (httpx 8s timeout test):
 //   gemini-3.5-flash      -> OK   | gemini-3.1-flash-lite -> OK
@@ -222,14 +223,42 @@ const DEMO_PLAN: { idea: string; steps: Array<{ step: number; name: string; data
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
-const MODEL_ICONS: Partial<Record<string, string>> = {
-  "gemini-3.5-flash": "◈",
-  "gemini-3.1-flash-lite": "✧",
-  "gemini-2.5-flash-lite": "▸",
-  "gemini-2.5-flash": "⚡",
-  "nvidia-nemotron": "🧠",
-  "insforge-gateway": "◆",
-  "nvidia-llama": "▲",
+function GeminiIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="gemini-grad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#60A5FA" />
+          <stop offset="1" stopColor="#A855F7" />
+        </linearGradient>
+      </defs>
+      <path d="M12 2C12.5 7.5 16.5 11.5 22 12C16.5 12.5 12.5 16.5 12 22C11.5 16.5 7.5 12.5 2 12C7.5 11.5 11.5 7.5 12 2Z" fill="url(#gemini-grad)" />
+    </svg>
+  )
+}
+
+function NvidiaIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="nv-grad" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#76B900" />
+          <stop offset="1" stopColor="#305010" />
+        </linearGradient>
+      </defs>
+      <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM14.07 17.38L10.5 13.81L12.5 11.81L17.57 16.88C16.53 18.06 14.93 18.8 13.14 18.96L14.07 17.38ZM7.44 13.13L12.5 8.07L10.5 6.07L5.43 11.14C6.47 9.96 8.07 9.21 9.86 9.05L7.44 13.13Z" fill="url(#nv-grad)" />
+    </svg>
+  )
+}
+
+const MODEL_ICONS: Partial<Record<string, React.ReactNode>> = {
+  "gemini-3.5-flash": <GeminiIcon />,
+  "gemini-3.1-flash-lite": <GeminiIcon />,
+  "gemini-2.5-flash-lite": <GeminiIcon />,
+  "gemini-2.5-flash": <GeminiIcon />,
+  "nvidia-nemotron": <NvidiaIcon />,
+  "insforge-gateway": <LogoMark size={18} />,
+  "nvidia-llama": <NvidiaIcon />,
 }
 
 const MODEL_BADGES: Partial<Record<string, { label: string; color: string; bg: string; border: string }>> = {
